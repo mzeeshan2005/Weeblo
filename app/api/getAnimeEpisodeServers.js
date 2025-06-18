@@ -19,33 +19,22 @@ export const getAnimeEpisodeServerLink = async (
 ) => {
   try {
     const resp = await fetch(
-      `${process.env.NEXT_PUBLIC_ANIME_URL}/api/stream?id=${epId}&server=${server}&type=${category}`,
+      `${process.env.NEXT_PUBLIC_ANIWATCH_URL}/api/v2/hianime/episode/sources?animeEpisodeId=${epId}&server=${server}&category=${category}`,
       {
         next: {
-          revalidate: 60 * 60 * 24,
+          revalidate: 3600,
         },
       }
     );
     const data = await resp.json();
-    const results = {
-      sources: [
-        {
-          url: data.results.streamingLink.link.file,
-          type: data.results.streamingLink.link.type,
-        },
-      ],
-      tracks: [...data.results.streamingLink.tracks],
-      intro: data.results.streamingLink.intro,
-      outro: data.results.streamingLink.outro,
-    };
-    return results;
+    return data.data;
   } catch (error) {
-    server = "hd-3";
+    server = "hd-2";
     const resp = await fetch(
       `${process.env.NEXT_PUBLIC_ANIME_URL}/api/stream?id=${epId}&server=${server}&type=${category}`,
       {
         next: {
-          revalidate: 60 * 60 * 24,
+          revalidate: 3600,
         },
       }
     );
