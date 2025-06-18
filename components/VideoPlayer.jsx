@@ -66,14 +66,14 @@ const VideoPlayer = ({
   const playbackSpeeds = [0.5, 1, 1.25, 2];
   const [currentSpeedIndex, setCurrentSpeedIndex] = useState(1);
   useEffect(() => {
-    const defaultTrackIndex = tracks?.findIndex((track) => track.default);
+    const defaultTrackIndex = tracks?.findIndex((track) => track.lang=="English");
     setCaptions(
       tracks
-        ?.filter((track) => track.kind === "captions")
+        ?.filter((track) => track.lang != "thumbnails")
         .map((track, index) => ({
-          src: track.file,
-          label: track.label,
-          default: track.default || false,
+          src: track.url,
+          label: track.lang,
+          default: track.lang=="English" || false,
           index: index,
         }))
     );
