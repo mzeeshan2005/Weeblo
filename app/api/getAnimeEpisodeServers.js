@@ -24,6 +24,7 @@ export const getAnimeEpisodeServerLink = async (
         next: {
           revalidate: 3600,
         },
+        cache: "force-cache",
       }
     );
     const data = await resp.json();
@@ -36,6 +37,7 @@ export const getAnimeEpisodeServerLink = async (
         next: {
           revalidate: 3600,
         },
+        cache: "force-cache",
       }
     );
     const data = await resp.json();
