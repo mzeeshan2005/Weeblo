@@ -37,6 +37,7 @@ const ScrollTopButton = dynamic(() => import("@/components/ScrollTopButton"), {
 });
 import { Separator } from "@/components/ui/separator";
 import { Loader } from "lucide-react";
+import RandomAnimeButton from "@/components/RandomAnimeButton";
 export default function Home() {
   let {
     spotlightAnimes,
@@ -109,6 +110,7 @@ export default function Home() {
         <Schedules />
       </div>
       <ScrollTopButton />
+      <RandomAnimeButton />
     </main>
   ) : (
     <Loader className="mx-auto relative top-48 h-12 w-12 animate-spin text-primary" />
