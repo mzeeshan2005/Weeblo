@@ -31,7 +31,7 @@ const ScrollTopButton = () => {
         <Button
             variant="ghost"
             onClick={scrollToTop}
-            className={cn("z-40 fixed w-fit right-4 bottom-16 mt-10 border bg-primary/50 hover:bg-primary/80 text-white px-4 py-2 rounded-full shadow-md transition-all duration-300 opacity-0 border-none", isVisible && "opacity-100")}
+            className={cn("z-40 fixed w-fit right-4 bottom-5 mt-10 border bg-primary/50 hover:bg-primary/80 text-white px-4 py-2 rounded-full shadow-md transition-all duration-300 opacity-0 border-none", isVisible && "opacity-100")}
         >
             <ArrowUpCircle />
         </Button>
