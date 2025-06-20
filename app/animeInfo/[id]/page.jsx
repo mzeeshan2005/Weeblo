@@ -69,6 +69,7 @@ const bakbak_one = Bakbak_One({
 export default function DetailedInfoCard({ params: { id } }) {
   const animeId = decodeURI(id);
   const [animeInfo, setAnimeInfo] = useState({});
+  const [watchId, setWatchId] = useState(null);
   const [animeExtraInfo, setAnimeExtraInfo] = useState(null);
   const [fetchLoading, setfetchLoading] = useState(null);
   const [fetchLoading2, setfetchLoading2] = useState(null);
@@ -106,6 +107,12 @@ export default function DetailedInfoCard({ params: { id } }) {
   }, []);
   useEffect(() => {
     if (animeInfo) {
+      const prefix = id.split("-").at(-1);
+      const lowercasename = animeInfo?.anime?.info?.name
+        .replaceAll(" ", "-")
+        .replaceAll(/[^a-zA-Z0-9-]/g, "")
+        .toLowerCase();
+      setWatchId(lowercasename + "-" + prefix);
       let redF = animeInfo?.anime?.moreInfo?.genres?.some((genreArray) => {
         return (
           genreArray.includes("Harem") ||
@@ -170,7 +177,7 @@ export default function DetailedInfoCard({ params: { id } }) {
             )}
             {animeInfo?.anime?.moreInfo.status != "Not yet aired" && (
               <Link
-                href={`/watch/${encodeURIComponent(id)}?ep=1`}
+                href={`/watch/${encodeURIComponent(watchId)}?ep=1`}
                 className="w-[35%] md:w-[20%]">
                 <Button className="w-full text-white sm:opacity-90 sm:hover:opacity-100">
                   <Play />
