@@ -436,7 +436,7 @@ const VideoPlayer = ({
         onEnded={() => {
           userPreferences?.AutoNext && setEpEnded(true);
         }}
-        url={`https://gogoanime-and-hianime-proxy.vercel.app/m3u8-proxy?url=${Url}`}
+        url={`https://m3u8-proxy-sigma.vercel.app/m3u8-proxy?url=${Url}`}
         controls={false}
         config={{
           file: {
