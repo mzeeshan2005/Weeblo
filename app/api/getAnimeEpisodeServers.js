@@ -19,19 +19,6 @@ export const getAnimeEpisodeServerLink = async (
 ) => {
   try {
     const resp = await fetch(
-      `${process.env.NEXT_PUBLIC_ANIWATCH_URL}/api/v2/hianime/episode/sources?animeEpisodeId=${epId}&server=${server}&category=${category}`,
-      {
-        cache: "force-cache",
-      }
-    );
-    const data = await resp.json();
-    if (data.success != true) {
-      throw new Error("Failed to fetch episode server link");
-    }
-    return data.data;
-  } catch (error) {
-    server = "hd-2";
-    const resp = await fetch(
       `${process.env.NEXT_PUBLIC_ANIME_URL}/api/stream?id=${epId}&server=${server}&type=${category}`,
       {
         cache: "force-cache",
@@ -49,6 +36,19 @@ export const getAnimeEpisodeServerLink = async (
       intro: data.results.streamingLink.intro,
       outro: data.results.streamingLink.outro,
     };
+    if (data.success != true) {
+      throw new Error("Failed to fetch episode server link");
+    }
     return results;
+  } catch (error) {
+    server = "hd-2";
+    const resp = await fetch(
+      `${process.env.NEXT_PUBLIC_ANIWATCH_URL}/api/v2/hianime/episode/sources?animeEpisodeId=${epId}&server=${server}&category=${category}`,
+      {
+        cache: "force-cache",
+      }
+    );
+    const data = await resp.json();
+    return data.data;
   }
 };
