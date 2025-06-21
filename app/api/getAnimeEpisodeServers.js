@@ -21,14 +21,11 @@ export const getAnimeEpisodeServerLink = async (
     const resp = await fetch(
       `${process.env.NEXT_PUBLIC_ANIWATCH_URL}/api/v2/hianime/episode/sources?animeEpisodeId=${epId}&server=${server}&category=${category}`,
       {
-        next: {
-          revalidate: 3600,
-        },
         cache: "force-cache",
       }
     );
     const data = await resp.json();
-    if (data.status != 200 || data.success != true) {
+    if (data.success != true) {
       throw new Error("Failed to fetch episode server link");
     }
     return data.data;
@@ -37,9 +34,6 @@ export const getAnimeEpisodeServerLink = async (
     const resp = await fetch(
       `${process.env.NEXT_PUBLIC_ANIME_URL}/api/stream?id=${epId}&server=${server}&type=${category}`,
       {
-        next: {
-          revalidate: 3600,
-        },
         cache: "force-cache",
       }
     );
