@@ -28,6 +28,9 @@ export const getAnimeEpisodeServerLink = async (
       }
     );
     const data = await resp.json();
+    if (data.status != 200 || data.success != true) {
+      throw new Error("Failed to fetch episode server link");
+    }
     return data.data;
   } catch (error) {
     server = "hd-2";
