@@ -21,7 +21,7 @@ const AnimeHorizontalCard = ({ anime, type }) => {
                         <img className={cn("aspect-[200/100] rounded-sm min-h-[90px] max-h-[90px] max-w-[80px] sm:max-h-[100px] sm:min-h-[100px] sm:min-w-[70px] sm:max-w-[70px]  object-center ")} alt="poster" layout="responsive" src={`${anime.poster}`} />
                         <div className='flex flex-col space-y-1 w-full'>
                             <div className={cn("grid grid-cols-4 space-x-2")}>
-                                <Badge variant="outline" className="text-center bg-secondary bg-opacity-70  text-white border-none">{type == "suggestions" ? anime?.moreInfo[2] : anime?.type?.split('(')[0]}</Badge>
+                                <Badge variant="outline" className="text-center bg-primary bg-opacity-70  text-white border-none">{type == "suggestions" ? anime?.moreInfo[2] : anime?.type?.split('(')[0]}</Badge>
                                 <Badge variant="outline" className="bg-white col-span-2 text-black dark:border-none bg-opacity-70">{type == "suggestions" ? anime?.moreInfo[0] : anime?.duration ? anime.duration : !special?"N/A":""}
                                 {special&&
                                     anime.episodes?.sub && <div className="flex items-center ">

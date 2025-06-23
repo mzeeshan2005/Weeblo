@@ -22,7 +22,8 @@ const AnimeVerticalCarousel = ({ animes, type, page }) => {
   const special =
     type == "Most Popular Animes" ||
     type == "Most Favorite Animes" ||
-    type == "Latest Completed Animes";
+    type == "Latest Completed Animes" ||
+    type == "Ai Suggestions";
   const promptToUse = type
     .replace("Animes", "")
     .replace("Latest", "")
@@ -42,7 +43,7 @@ const AnimeVerticalCarousel = ({ animes, type, page }) => {
       ]}
       orientation="vertical"
       className={cn("w-full border-none", page == "info" && "md:mt-20")}>
-      {type != "suggestions" && (
+      {type != "suggestions" && type != "Ai Suggestions" && (
         <p
           className={cn(
             "text-secondary ml-2 font-bold text-lg sm:text-xl lg:text-2xl select-none",
@@ -51,7 +52,7 @@ const AnimeVerticalCarousel = ({ animes, type, page }) => {
           {type}
         </p>
       )}
-      {special && (
+      {special && type != "Ai Suggestions" && (
         <div className="w-full text-right pr-2">
           <Link href={`/search/${promptToUse}?type=category`}>
             <span className="font-semibold text-xs hover:text-secondary hover:cursor-pointer">
@@ -65,15 +66,13 @@ const AnimeVerticalCarousel = ({ animes, type, page }) => {
           "max-h-[20vh] md:max-h-[70vh] z-0",
           type == "suggestions" && "md:max-h-[55vh] min-w-40"
         )}>
-        {/* {!animes && type != "suggestions" &&
-                    <Loader className="mx-auto mt-5 relative bottom-0 h-6 w-6 animate-spin text-primary" />} */}
         {animes?.map((anime) => (
           <CarouselItem key={anime.id} className="basis-1 min-h-[9.4rem] z-0">
             <AnimeHorizontalCard anime={anime} type={type} />
           </CarouselItem>
         ))}
       </CarouselContent>
-      
+
       {type != "suggestions" && !special && <CarouselPrevious />}
       {type != "suggestions" && !special && <CarouselNext />}
     </Carousel>

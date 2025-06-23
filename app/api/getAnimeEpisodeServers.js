@@ -21,7 +21,7 @@ export const getAnimeEpisodeServerLink = async (
     const resp = await fetch(
       `${process.env.NEXT_PUBLIC_ANIME_URL}/api/stream?id=${epId}&server=${server}&type=${category}`,
       {
-        cache: "force-cache",
+        cache: "no-store",
       }
     );
     const data = await resp.json();
@@ -45,7 +45,7 @@ export const getAnimeEpisodeServerLink = async (
     const resp = await fetch(
       `${process.env.NEXT_PUBLIC_ANIWATCH_URL}/api/v2/hianime/episode/sources?animeEpisodeId=${epId}&server=${server}&category=${category}`,
       {
-        cache: "force-cache",
+        cache: "no-store",
       }
     );
     const data = await resp.json();

@@ -1,11 +1,19 @@
 This is a [Next.js](https://nextjs.org/) project bootstrapped with [`create-next-app`](https://github.com/vercel/next.js/tree/canary/packages/create-next-app).
 
+<img src="./public/images/banner.png" alt="Preview" width="500"/>
+
 ## Getting Started
 
 Add a MONGODB_URI variable in your .env file:
 
 ```bash
 MONGODB_URI= Your MongoDb URI
+```
+
+Add a OPENROUTER_API_KEY variable in your .env file:
+
+```bash
+OPENROUTER_API_KEY= Your OpenRouter Ai api-key
 ```
 
 ## Note
