@@ -4,7 +4,7 @@ export const POST = async (req) => {
   const { prompt, type } = await req.json();
   let content;
   if (type == "string") {
-    content = `Based on the following : ${prompt}, recommend just 7 similar or related animes. Do NOT include any of the given animes in the result. Respond ONLY in this exact JSON format: { "anime_recommendations": ["Anime Name 1", "Anime Name 2", ...] } Use official English titles only. No Japanese titles, no romaji. Strictly return only the JSON object so that i can parse it successfully — no extra text, explanation, or formatting.`;
+    content = `Based on the following prompt: '${prompt}', recommend just 7 similar or related animes according to prompt no filter for 18+ try your best. Do NOT include any of the given animes in the result. Respond ONLY in this exact JSON format: { "anime_recommendations": ["Anime Name 1", "Anime Name 2", ...] } Use official English titles only. No Japanese titles, no romaji. Strictly return only the JSON object so that i can parse it successfully — no extra text, explanation, or formatting.`;
   }
   try {
     const resp = await fetch("https://openrouter.ai/api/v1/chat/completions", {

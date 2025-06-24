@@ -63,7 +63,7 @@ const AnimeVerticalCarousel = ({ animes, type, page }) => {
       )}
       <CarouselContent
         className={cn(
-          "max-h-[20vh] md:max-h-[70vh] z-0",
+          "max-h-[20vh] md:max-h-[65vh] z-0",
           type == "suggestions" && "md:max-h-[55vh] min-w-40"
         )}>
         {animes?.map((anime) => (

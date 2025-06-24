@@ -93,7 +93,7 @@ const SearchInput = () => {
             <Search />
           </Button>
         </DropdownMenuTrigger>
-        <DropdownMenuContent className="mt-2 mr-4 relative right-2 sm:right-3 sm:pl-3 max-w-screen sm:min-w-80">
+        <DropdownMenuContent className="mt-2 mr-4 relative sm:right-3 sm:pl-3 w-screen sm:w-96">
           <form
             onSubmit={handleSubmit(onSubmit)}
             className="flex items-center justify-around gap-1 sm:gap-2 focus:w-full sm:focus:shadow-md dark:sm:focus:shadow-blue-500">
