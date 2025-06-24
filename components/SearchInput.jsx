@@ -56,10 +56,10 @@ const SearchInput = () => {
       });
 
       const data = await resp.json();
-      const suggestions = JSON.parse(data.body.message).anime_recommendations;
+      const suggestions = JSON.parse(data.body.message)?.anime_recommendations;
 
       const results = await Promise.all(
-        suggestions.map(async (sug) => {
+        suggestions?.map(async (sug) => {
           try {
             const res = await getSearchResults(sug);
             if (!res || !res.animes || res.animes.length === 0) return null;
