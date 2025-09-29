@@ -53,12 +53,11 @@ export const getAnimeEpisodeServerLink = async (
   } catch (error) {
     server = "hd-2";
 
-    const resp = await fetch(`https://yumaapi.vercel.app/watch?episodeId=${epId.replace('?ep=', '$episode$')}&type=${category}`,)
+    const resp = await fetch(`https://yumaapi.vercel.app/watch?episodeId=${epId.replace('?ep=', '$episode$')}&type=${category}`)
     const data = await resp.json();
     if (!data) {
       throw new Error("Failed to fetch episode server link");
     }
-    ll
     const results = {
       sources: [
         {
