@@ -148,7 +148,7 @@ const VideoPlayer = ({
   }
   useEffect(() => {
     if (selectedTrack == "off" || !captions || !captions[selectedTrack]) return;
-    fetchSubtitleFile(captions[selectedTrack].src).then((vttContent) => {
+    fetchSubtitleFile(captions[selectedTrack].src?captions[selectedTrack].src:captions[selectedTrack].url).then((vttContent) => {
       if (vttContent) {
         const cap = parseVTT(vttContent);
         setCaptionsToUse(cap);
@@ -436,7 +436,7 @@ const VideoPlayer = ({
         onEnded={() => {
           userPreferences?.AutoNext && setEpEnded(true);
         }}
-        url={`https://m3u8-proxy-sigma.vercel.app/m3u8-proxy?url=${Url}`}
+        url={`https://hls-proxy-m3u8.vercel.app/m3u8-proxy?url=${Url}`}
         controls={false}
         config={{
           file: {
@@ -702,12 +702,12 @@ const VideoPlayer = ({
                       setIsOpen1(!isOpen1);
                       setSelectedTrack(i);
                     }}
-                    key={c.label}
+                    key={c.label?c.label:c.lang}
                     className={cn(
                       "bg-transparent hover:bg-secondary/20 w-full border-none leading-none text-xs p-1",
                       selectedTrack == i && "text-secondary bg-white"
                     )}>
-                    {c.label}
+                    {c.label?c.label:c.lang}
                   </Button>
                 ))}
               </div>
