@@ -43,6 +43,8 @@ const SearchInput = () => {
     }, 500);
   };
   const handleAiSearch = async (prompt) => {
+    const parseJSON = (str) =>
+      JSON.parse(str.replace("<｜begin▁of▁sentence｜>","").replace(/```json|```/g, "").trim());
     try {
       setfetchLoading(true);
 
@@ -56,7 +58,7 @@ const SearchInput = () => {
       });
 
       const data = await resp.json();
-      const suggestions = JSON.parse(data.body.message)?.anime_recommendations;
+      const suggestions = parseJSON(data?.body.message || "{}")?.anime_recommendations;
 
       const results = await Promise.all(
         suggestions?.map(async (sug) => {
