@@ -1,78 +1,123 @@
 import { CardContent, Card } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import { Dot } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
 
-const ScheduledCard = ({ anime }) => {
+const ScheduledCard = ({ anime, userTimezone }) => {
   const { time, name, airingTimestamp, secondsUntilAiring } = anime;
-  // const convertTo12HourFormat = (time) => {
-  //   let [hours, minutes] = time.split(":").map(Number);
+  const [timeLeft, setTimeLeft] = useState(secondsUntilAiring || 0);
+  const [isClient, setIsClient] = useState(false);
 
-  //   // Determine AM or PM suffix
-  //   const period = hours >= 12 ? "PM" : "AM";
-
-  //   // Convert hours to 12-hour format
-  //   hours = hours % 12 || 12; // '0' hours should convert to '12'
-
-  //   // Return formatted time
-  //   return `${hours}:${String(minutes).padStart(2, "0")} ${period}`;
-  // };
-  const [timeLeft, setTimeLeft] = useState(secondsUntilAiring);
-
+  // Ensure client-side rendering for timezone operations
   useEffect(() => {
-    if (timeLeft <= 0) return; // Stop the countdown for negative values
+    setIsClient(true);
+  }, []);
+
+  // Update countdown timer
+  useEffect(() => {
+    if (timeLeft <= 0) return;
 
     const interval = setInterval(() => {
       setTimeLeft((prev) => {
-        if (prev <= 1) {
-          clearInterval(interval); // Stop the interval at 0
-          return 0;
-        }
-        return prev - 1;
+        const newTime = prev - 1;
+        return newTime <= 0 ? 0 : newTime;
       });
     }, 1000);
 
     return () => clearInterval(interval);
   }, [timeLeft]);
 
-  const formatTime = (seconds) => {
+  // Format remaining time
+  const formatTime = useCallback((seconds) => {
+    if (seconds <= 0) return "Aired";
+
     const hours = Math.floor(seconds / 3600);
     const minutes = Math.floor((seconds % 3600) / 60);
     const secs = seconds % 60;
-    return `${hours}h ${minutes}m ${secs}s`;
-  };
+
+    if (hours > 0) {
+      return `${hours}h ${minutes}m ${secs}s`;
+    }
+    return `${minutes}m ${secs}s`;
+  }, []);
+
+  // Get display time (use airingTimestamp converted to user timezone)
+  const displayTime = useMemo(() => {
+    if (!isClient) return "--:--";
+
+    if (airingTimestamp) {
+      return new Date(airingTimestamp * 1000).toLocaleTimeString(undefined, {
+        hour: "2-digit",
+        minute: "2-digit",
+        timeZone: userTimezone,
+      });
+    }
+
+    return time || "--:--";
+  }, [airingTimestamp, isClient, time, userTimezone]);
+
+  // Format time remaining with memoization
+  const formattedTimeLeft = useMemo(() => {
+    return formatTime(timeLeft);
+  }, [timeLeft, formatTime]);
+
+  // Determine status color
+  const statusColor = useMemo(() => {
+    if (timeLeft <= 0) return "text-green-500";
+    if (timeLeft <= 600) return "text-orange-500"; // Last 10 minutes
+    return "text-yellow-500";
+  }, [timeLeft]);
+
   return (
-    <Card className="h-full w-full">
+    <Card className="h-full w-full hover:shadow-lg transition-shadow">
       <CardContent className="p-2 pt-2 grid gap-4 mx-auto">
         <div className="grid gap-1.5">
-          <div className="flex items-center">
-            <div className="text-xs flex items-center">
-              <p
-                className={cn(
-                  "text-yellow-500",
-                  timeLeft <= 0 && "text-green-500"
-                )}>
-                <Dot />
-              </p>
+          {/* Anime Name with Status Indicator */}
+          <div className="flex items-center gap-1">
+            <div className="flex-shrink-0">
+              <Dot className={cn("w-2 h-2", statusColor)} />
             </div>
-            <h3 className="text-xs font-bold tracking-wide line-clamp-2">
+            <h3 className="text-xs font-bold tracking-wide line-clamp-2 flex-1">
               {name}
             </h3>
           </div>
 
-          <div className="grid grid-cols-2">
-            <h4 className="text-xs font-semibold text-secondary text-opacity-80 tracking-tight">
-              {timeLeft > 0 ? <p>{formatTime(timeLeft)}</p> : "Aired"}
-            </h4>
-            <p className="text-xs opacity-90 font-medium text-right ">
-              {new Date(airingTimestamp * 1000).toLocaleTimeString(undefined, {
-                timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-              })}
-            </p>
+          {/* Time Information Grid */}
+          <div className="grid grid-cols-2 gap-2 text-xs">
+            {/* Time Until Airing */}
+            <div>
+              <p className="text-opacity-70 text-secondary opacity-70 text-[10px] uppercase tracking-tight mb-0.5">
+                Starts In
+              </p>
+              <p
+                className={cn(
+                  "font-semibold",
+                  timeLeft <= 0 && "text-green-500",
+                  timeLeft > 0 && timeLeft <= 600 && "text-orange-500",
+                  timeLeft > 600 && "text-yellow-500"
+                )}
+              >
+                {formattedTimeLeft}
+              </p>
+            </div>
+
+            {/* Airing Time */}
+            <div className="text-right">
+              <p className="text-opacity-70 text-secondary opacity-70 text-[10px] uppercase tracking-tight mb-0.5">
+                Time
+              </p>
+              <p className="font-semibold">{displayTime}</p>
+              {userTimezone && (
+                <p className="text-[8px] opacity-50 truncate">
+                  {userTimezone.split("/")[1] || userTimezone}
+                </p>
+              )}
+            </div>
           </div>
         </div>
       </CardContent>
     </Card>
   );
 };
+
 export default ScheduledCard;

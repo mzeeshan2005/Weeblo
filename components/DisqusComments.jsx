@@ -1,3 +1,4 @@
+"use client"
 import React, { useState } from 'react';
 import { DiscussionEmbed } from 'disqus-react';
 import { ChevronDown, ChevronUp } from "lucide-react"
@@ -35,7 +36,7 @@ const DisqusComments = ({ episode }) => {
                         className="p-0 text-secondary"
                         shortname={disqusShortname}
                         config={config}
-                        key={theme}
+                        key={`${theme}+${config.identifier}`}
                     />
                 </div>
             </div>

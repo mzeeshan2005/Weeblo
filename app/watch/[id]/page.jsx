@@ -65,6 +65,7 @@ const bebas_nueue = Bebas_Neue({
   style: "normal",
   subsets: ["latin"],
 });
+
 const initialUserPreferences = {
   AutoPlay: false,
   AutoNext: true,
@@ -72,31 +73,26 @@ const initialUserPreferences = {
   volumeLevel: 0.9,
 };
 
-const getUserPreferencesFromLocalStorage = () => {
-  if (typeof window !== "undefined") {
-    const preferences = localStorage.getItem("userPreferences");
-    return preferences ? JSON.parse(preferences) : initialUserPreferences;
-  } else {
-    return initialUserPreferences;
-  }
-};
-
 const setUserPreferencesToLocalStorage = (preferences) => {
   localStorage.setItem("userPreferences", JSON.stringify(preferences));
 };
+
 export default function WatchPage({ params: { id } }) {
   let { user, setUser } = useAppContext();
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const animeId = decodeURI(id);
-  const [fetchLoading, setfetchLoading] = useState(null);
+
+  // Loading states
+  const [isClient, setIsClient] = useState(false);
+  const [fetchLoading, setfetchLoading] = useState(true);
   const [serverLoading, setServerLoading] = useState(null);
   const [fetchLoading2, setfetchLoading2] = useState(null);
+
+  // Data states
   const [episodesResults, setEpisodesResults] = useState(null);
-  const [userPreferences, setUserPreferences] = useState(
-    getUserPreferencesFromLocalStorage
-  );
+  const [userPreferences, setUserPreferences] = useState(initialUserPreferences);
   const [episodeServers, setEpisodeServers] = useState(null);
   const [epEnded, setEpEnded] = useState(false);
   const [episodeServerLink, setEpisodeServerLink] = useState(null);
@@ -109,67 +105,131 @@ export default function WatchPage({ params: { id } }) {
   const [totalTime, setTotalTime] = useState(null);
   const [continueWatchTime, setContinueWatchTime] = useState(null);
   const [shared, setShared] = useState(null);
+
+  // Initialize client-side and preferences
+  useEffect(() => {
+    setIsClient(true);
+    const storedPreferences = localStorage.getItem("userPreferences");
+    if (storedPreferences) {
+      setUserPreferences(JSON.parse(storedPreferences));
+    }
+  }, []);
+
+  // Save preferences to localStorage whenever they change
+  useEffect(() => {
+    if (isClient) {
+      setUserPreferencesToLocalStorage(userPreferences);
+    }
+  }, [userPreferences, isClient]);
+
+  // Fetch episodes
   const fetchEpisodes = async () => {
-    setfetchLoading(true);
-    await getAnimeEpisodes(animeId).then((res) => setEpisodesResults(res));
-    setfetchLoading(false);
+    try {
+      setfetchLoading(true);
+      const res = await getAnimeEpisodes(animeId);
+      setEpisodesResults(res);
+    } catch (error) {
+      console.error("Error fetching episodes:", error);
+    } finally {
+      setfetchLoading(false);
+    }
   };
+
+  // Fetch episode servers
   const fetchEpServers = async () => {
     if (!currentEp) return;
-    await getAnimeEpisodeServers(currentEp.episodeId).then((res) =>
-      setEpisodeServers(res)
-    );
+    try {
+      const res = await getAnimeEpisodeServers(currentEp.episodeId);
+      setEpisodeServers(res);
+    } catch (error) {
+      console.error("Error fetching episode servers:", error);
+    }
   };
+
+  // Fetch episode server link
   const fetchEpServerLink = async () => {
     if (!currentServerType) return;
-    setServerLoading(true);
-    await getAnimeEpisodeServerLink(
-      currentEp?.episodeId,
-      "hd-2",
-      currentServerType
-    ).then((res) => setEpisodeServerLink(res));
-    setServerLoading(false);
+    try {
+      setServerLoading(true);
+      const res = await getAnimeEpisodeServerLink(
+        currentEp?.episodeId,
+        "hd-2",
+        currentServerType
+      );
+      setEpisodeServerLink(res);
+    } catch (error) {
+      console.error("Error fetching episode server link:", error);
+    } finally {
+      setServerLoading(false);
+    }
   };
+
+  // Fetch anime info
   const fetchInfo = async () => {
-    setfetchLoading2(true);
-    await getAnimeInfo(animeId).then((res) => setAnimeInfo(res));
-    setfetchLoading2(false);
+    try {
+      setfetchLoading2(true);
+      const res = await getAnimeInfo(animeId);
+      setAnimeInfo(res);
+    } catch (error) {
+      console.error("Error fetching anime info:", error);
+    } finally {
+      setfetchLoading2(false);
+    }
   };
+
+  // Fetch extra anime info
   const fetchExtraInfo = async () => {
-    setfetchLoading2(true);
-    await getAnimeExtraInfo(
-      animeInfo?.anime?.info?.name,
-      animeInfo?.anime?.moreInfo?.japanese
-    ).then((res) => setAnimeExtraInfo(res));
-    setfetchLoading2(false);
+    if (!animeInfo?.anime?.info?.name) return;
+    try {
+      setfetchLoading2(true);
+      const res = await getAnimeExtraInfo(
+        animeInfo?.anime?.info?.name,
+        animeInfo?.anime?.moreInfo?.japanese
+      );
+      setAnimeExtraInfo(res);
+    } catch (error) {
+      console.error("Error fetching extra info:", error);
+    } finally {
+      setfetchLoading2(false);
+    }
   };
+
+  // Fetch episode info
   const fetchEPInfo = async () => {
     try {
       setfetchLoading2(true);
-      if (!animeExtraInfo) return;
+      if (!animeExtraInfo?.episodes || !currentEp) return;
+
       const res = await fetch(animeExtraInfo?.episodes, {
         headers: {
           Accept: "application/vnd.api+json",
-          "Content-Type": " application/vnd.api+json",
+          "Content-Type": "application/vnd.api+json",
         },
         next: {
           revalidate: 60 * 60 * 24,
         },
       });
+
       const epsData = await res.json();
       if (epsData.data.length < currentEp?.number) {
         setEpInfo(null);
-        return setfetchLoading2(false);
+        return;
       }
+
       const epId = epsData.data[currentEp?.number - 1].id;
-      await getEpisodeDetail(epId).then((res) => setEpInfo(res));
-      setfetchLoading2(false);
+      const epDetailRes = await getEpisodeDetail(epId);
+      setEpInfo(epDetailRes);
     } catch (error) {
       console.error("Error fetching episode data:", error);
+    } finally {
       setfetchLoading2(false);
     }
   };
+
+  // Continue watching handler
   const continueWatchingHandler = async () => {
+    if (!user?.email || !animeInfo?.anime?.info?.name) return;
+
     const continueWatchingData = {
       animeId,
       name: animeInfo?.anime?.info?.name,
@@ -179,6 +239,7 @@ export default function WatchPage({ params: { id } }) {
       episodeNumber: currentEp?.number,
       userEmail: user.email,
     };
+
     try {
       const response = await fetch("/api/continueAnime", {
         method: "PUT",
@@ -187,8 +248,9 @@ export default function WatchPage({ params: { id } }) {
         },
         body: JSON.stringify(continueWatchingData),
       });
+
       const data = await response.json();
-      if (data.status == 200) {
+      if (data.status === 200) {
         const updatedAnime = {
           animeId: continueWatchingData.animeId,
           continueTime: continueWatchingData.continueTime,
@@ -197,9 +259,11 @@ export default function WatchPage({ params: { id } }) {
           name: continueWatchingData.name,
           poster: continueWatchingData.poster,
         };
+
         const index = user.continueWatching.findIndex(
           (anime) => anime.animeId === continueWatchingData.animeId
         );
+
         const updatedUser = {
           ...user,
           continueWatching: [...user.continueWatching],
@@ -212,119 +276,150 @@ export default function WatchPage({ params: { id } }) {
           updatedUser.continueWatching.unshift(updatedAnime);
         }
         setUser(updatedUser);
-      } else {
-        throw new Error(data.body.message);
       }
     } catch (error) {
-      console.log(error.message);
+      console.error("Continue watching error:", error);
     }
   };
+
+  // Handle checkbox changes
   const handleCheckboxChange = (key, value) => {
     setUserPreferences((prevState) => ({
       ...prevState,
       [key]: value,
     }));
   };
+
+  // Initial fetch - when animeId is available
   useEffect(() => {
+    if (!animeId || !isClient) return;
     fetchEpisodes();
     fetchInfo();
-  }, []);
+  }, [animeId, isClient]);
+
+  // Set current episode based on query params
   useEffect(() => {
+    if (!episodesResults?.episodes) return;
     const epNumber = searchParams?.get("ep");
-    if (!epNumber) return;
-    if (Number(epNumber) < episodesResults?.episodes.length) {
-      setCurrentEp(episodesResults?.episodes[Number(epNumber) - 1]);
-    } else {
-      setCurrentEp(
-        episodesResults?.episodes[Number(episodesResults?.episodes.length) - 1]
-      );
-    }
+    const epIndex = epNumber ? Number(epNumber) - 1 : 0;
+    const validIndex =
+      epIndex >= 0 && epIndex < episodesResults.episodes.length
+        ? epIndex
+        : episodesResults.episodes.length - 1;
+    setCurrentEp(episodesResults.episodes[validIndex]);
   }, [episodesResults, searchParams]);
+
+  // Fetch servers when episode changes
   useEffect(() => {
+    if (!currentEp || !isClient) return;
     fetchEpServers();
-  }, [currentEp]);
+  }, [currentEp, isClient]);
+
+  // Set server type based on available servers
   useEffect(() => {
-    if (!episodeServers) return;
+    if (!episodeServers || !isClient) return;
     setCurrentServerType((prevState) =>
       episodeServers?.dub?.length > 0 ? prevState : "sub"
     );
-  }, [episodeServers]);
+  }, [episodeServers, isClient]);
+
+  // Fetch server link when server type or episode changes
   useEffect(() => {
-    if (!currentEp) return;
+    if (!currentEp || !isClient) return;
     fetchEpServerLink();
-  }, [currentServerType, currentEp]);
+  }, [currentServerType, currentEp, isClient]);
+
+  // Fetch extra info and episode info when anime info is available
   useEffect(() => {
-    if (!animeInfo) return;
+    if (!animeInfo?.anime?.info?.name || !isClient) return;
     fetchExtraInfo();
-    fetchEPInfo();
-  }, [animeInfo]);
-  useEffect(() => {
     if (
-      animeInfo?.anime?.info?.stats?.type == "TV" ||
-      animeInfo?.anime?.info?.stats?.type == "OVA" ||
-      animeInfo?.anime?.info?.stats?.type == "Special" ||
-      animeInfo?.anime?.info?.stats?.type == "ONA"
+      animeInfo?.anime?.info?.stats?.type === "TV" ||
+      animeInfo?.anime?.info?.stats?.type === "OVA" ||
+      animeInfo?.anime?.info?.stats?.type === "Special" ||
+      animeInfo?.anime?.info?.stats?.type === "ONA"
     ) {
       fetchEPInfo();
-    } else {
+    }
+  }, [animeInfo, isClient]);
+
+  // Fetch episode info when extra info or current episode changes
+  useEffect(() => {
+    if (
+      !animeInfo?.anime?.info?.name ||
+      !currentEp ||
+      !isClient ||
+      !animeExtraInfo
+    )
       return;
+
+    if (
+      animeInfo?.anime?.info?.stats?.type === "TV" ||
+      animeInfo?.anime?.info?.stats?.type === "OVA" ||
+      animeInfo?.anime?.info?.stats?.type === "Special" ||
+      animeInfo?.anime?.info?.stats?.type === "ONA"
+    ) {
+      fetchEPInfo();
     }
-  }, [animeExtraInfo, currentEp]);
+  }, [animeExtraInfo, currentEp, isClient]);
+
+  // Update page title
   useEffect(() => {
-    const storedPreferences = localStorage.getItem("userPreferences");
-    if (storedPreferences) {
-      setUserPreferences(JSON.parse(storedPreferences));
-    }
-  }, []);
-  useEffect(() => {
-    setUserPreferencesToLocalStorage(userPreferences);
-  }, [userPreferences]);
-  useEffect(() => {
-    if (animeInfo?.anime?.info?.name) {
-      window.document.title = "Weeblo - Watch " + animeInfo?.anime?.info?.name;
-    }
-  }, [animeInfo]);
+    if (!animeInfo?.anime?.info?.name || !isClient) return;
+    window.document.title =
+      "Weeblo - Watch " + animeInfo?.anime?.info?.name;
+  }, [animeInfo, isClient]);
+
+  // Next episode handler
   const nextEp = () => {
     if (currentEp?.number < episodesResults?.episodes.length) {
       router.push(`${pathname}?ep=${currentEp?.number + 1}`);
-      setCurrentEp(episodesResults?.episodes[currentEp?.number]);
       setEpEnded(false);
     }
   };
+
+  // Previous episode handler
   const prevEp = () => {
     if (currentEp?.number > 1) {
       router.push(`${pathname}?ep=${currentEp?.number - 1}`);
-      setCurrentEp(episodesResults?.episodes[currentEp?.number - 1]);
       setEpEnded(false);
     }
   };
+
+  // Auto next episode when ended
   useEffect(() => {
-    if (epEnded) {
+    if (epEnded && userPreferences?.AutoNext) {
       nextEp();
     }
-  }, [epEnded]);
+  }, [epEnded, userPreferences?.AutoNext]);
+
+  // Continue watching update
   useEffect(() => {
     if (
-      !user ||
+      !user?.email ||
       !playedTime ||
       !totalTime ||
-      Math.floor(playedTime % 2) != 0 ||
-      Math.round(playedTime % 2) != 0
+      Math.floor(playedTime % 2) !== 0 ||
+      Math.round(playedTime % 2) !== 0
     )
       return;
     continueWatchingHandler();
-  }, [playedTime, totalTime]);
+  }, [playedTime, totalTime, user?.email]);
+
+  // Set continue watch time
   useEffect(() => {
-    if (!user || !currentEp) return;
-    const anime = user.continueWatching.filter(
+    if (!user?.continueWatching || !currentEp || !isClient) return;
+    const anime = user.continueWatching.find(
       (anime) => anime.animeId === animeId
-    )[0];
-    if (anime?.episodeNumber == currentEp.number) {
+    );
+    if (anime?.episodeNumber === currentEp.number) {
       setContinueWatchTime(anime.continueTime);
     } else {
       setContinueWatchTime(null);
     }
-  }, [user, currentEp, serverLoading]);
+  }, [user?.continueWatching, currentEp, serverLoading, isClient, animeId]);
+
+  // Copy URL handler
   const handleCopyUrl = () => {
     const currentUrl = window.location.href;
     navigator.clipboard.writeText(currentUrl).then(() => {
@@ -335,7 +430,25 @@ export default function WatchPage({ params: { id } }) {
     });
   };
 
-  return !fetchLoading ? (
+  // Loading state
+  if (!isClient || fetchLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <Loader className="h-12 w-12 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  // Guard against missing animeId
+  if (!animeId) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <p className="text-red-500">Anime not found</p>
+      </div>
+    );
+  }
+
+  return (
     <div className="lg:pl-1 flex-grow-0 flex flex-col mt-10 sm:mt-16">
       <div className="relative flex flex-col">
         <div className="flex gap-2 flex-col lg:flex-row">
@@ -343,17 +456,11 @@ export default function WatchPage({ params: { id } }) {
             {serverLoading && (
               <Loader className="mx-auto relative top-1/2 h-8 w-8 animate-spin text-primary" />
             )}
-            {!serverLoading && (
+            {!serverLoading && episodeServerLink?.sources?.[0]?.url && (
               <VideoPlayer
-                Url={
-                  episodeServerLink?.sources &&
-                  episodeServerLink?.sources[0]?.url
-                }
+                Url={episodeServerLink?.sources[0]?.url}
                 tracks={episodeServerLink?.tracks}
-                type={
-                  episodeServerLink?.sources &&
-                  episodeServerLink?.sources[0]?.type
-                }
+                type={episodeServerLink?.sources[0]?.type}
                 outro={episodeServerLink?.outro}
                 intro={episodeServerLink?.intro}
                 setEpEnded={setEpEnded}
@@ -371,6 +478,7 @@ export default function WatchPage({ params: { id } }) {
             currentEp={currentEp}
           />
         </div>
+
         <div className="grid lg:grid-cols-4">
           <div className="px-4 col-span-1 lg:col-span-3 py-2">
             <div className="w-fit ml-auto mb-2 lg:mb-0 flex space-x-3 text-xs items-center">
@@ -400,8 +508,7 @@ export default function WatchPage({ params: { id } }) {
               </Button>
               <div className="flex items-center space-x-2">
                 <Checkbox
-                  defaultChecked={false}
-                  checked={userPreferences?.AutoPlay}
+                  checked={userPreferences?.AutoPlay || false}
                   onCheckedChange={(checked) =>
                     handleCheckboxChange("AutoPlay", checked)
                   }
@@ -409,14 +516,13 @@ export default function WatchPage({ params: { id } }) {
                 />
                 <label
                   htmlFor="autoPlay"
-                  className=" font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+                  className="font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
                   Auto Play
                 </label>
               </div>
               <div className="flex items-center space-x-2">
                 <Checkbox
-                  defaultChecked={true}
-                  checked={userPreferences?.AutoNext}
+                  checked={userPreferences?.AutoNext !== false}
                   onCheckedChange={(checked) =>
                     handleCheckboxChange("AutoNext", checked)
                   }
@@ -424,25 +530,27 @@ export default function WatchPage({ params: { id } }) {
                 />
                 <label
                   htmlFor="autoNext"
-                  className=" font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+                  className="font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
                   Auto Next
                 </label>
               </div>
             </div>
+
             <h1
               className={cn(
                 "text-2xl md:text-3xl font-bold",
                 bebas_nueue.className
               )}>
-              {animeInfo?.anime?.info?.stats?.type != "TV"
+              {animeInfo?.anime?.info?.stats?.type !== "TV"
                 ? animeInfo?.anime?.info?.name + " - " + currentEp?.title
                 : currentEp?.number + " - " + currentEp?.title}
             </h1>
-            <div className="flex justify-between items-centers space-x-4 my-4">
+
+            <div className="flex justify-between items-center space-x-4 my-4">
               <div className="flex items-center">
                 <TooltipProvider>
                   <Tooltip>
-                    <TooltipTrigger>
+                    <TooltipTrigger asChild>
                       <Button variant="ghost" onClick={handleCopyUrl}>
                         <Share2
                           className={cn(
@@ -460,7 +568,7 @@ export default function WatchPage({ params: { id } }) {
                 {user && animeInfo && currentEp && (
                   <TooltipProvider>
                     <Tooltip>
-                      <TooltipTrigger>
+                      <TooltipTrigger asChild>
                         <GenerateRoom
                           name={animeInfo?.anime?.info?.name}
                           epNo={currentEp?.number}
@@ -479,11 +587,10 @@ export default function WatchPage({ params: { id } }) {
               </div>
               <div className="flex items-center space-x-2">
                 <ToggleGroup
-                  defaultValue="sub"
                   type="single"
                   value={currentServerType}
                   onValueChange={(e) => {
-                    setCurrentServerType(e);
+                    if (e) setCurrentServerType(e);
                   }}>
                   {episodeServers?.raw?.length > 0 && (
                     <ToggleGroupItem
@@ -510,13 +617,14 @@ export default function WatchPage({ params: { id } }) {
                 </ToggleGroup>
               </div>
             </div>
+
             <div className="my-4">
               <Link
                 className="flex items-center space-x-2 my-2"
                 href={`/animeInfo/${encodeURIComponent(id)}`}>
-                <Avatar className="">
+                <Avatar>
                   <AvatarImage
-                    alt={animeInfo?.anime?.info?.name[0]}
+                    alt={animeInfo?.anime?.info?.name?.[0]}
                     src={animeInfo?.anime?.info?.poster}
                   />
                 </Avatar>
@@ -525,6 +633,7 @@ export default function WatchPage({ params: { id } }) {
                 </span>
               </Link>
             </div>
+
             <div className="mt-4 space-y-2">
               {fetchLoading2 ? (
                 <Loader className="mx-auto my-auto h-6 w-6 animate-spin text-secondary" />
@@ -534,14 +643,16 @@ export default function WatchPage({ params: { id } }) {
                   animeInfo={animeInfo}
                   animeExtraInfo={animeExtraInfo}
                   title={
-                    animeInfo?.anime?.info?.stats?.type != "TV"
+                    animeInfo?.anime?.info?.stats?.type !== "TV"
                       ? animeInfo?.anime?.info?.name
                       : currentEp?.title
                   }
                 />
               )}
             </div>
+
             <Separator className="my-2" />
+
             <div className="rounded-lg mt-5 overflow-hidden z-0">
               {currentEp && (
                 <DisqusComments
@@ -554,21 +665,19 @@ export default function WatchPage({ params: { id } }) {
               )}
             </div>
           </div>
+
           <Separator className="my-2 lg:hidden" />
+
           <div className="w-full lg:w-80 p-4">
-            <div>
-              <AnimeVerticalCarousel
-                animes={animeInfo?.relatedAnimes}
-                type={"Related"}
-                page="info"
-              />
-            </div>
+            <AnimeVerticalCarousel
+              animes={animeInfo?.relatedAnimes}
+              type={"Related"}
+              page="info"
+            />
           </div>
         </div>
       </div>
       <ScrollTopButton />
     </div>
-  ) : (
-    <Loader className="mx-auto relative top-48 h-12 w-12 animate-spin text-primary" />
   );
 }
