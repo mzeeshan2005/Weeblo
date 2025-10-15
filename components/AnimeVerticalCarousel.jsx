@@ -64,11 +64,11 @@ const AnimeVerticalCarousel = ({ animes, type, page }) => {
       <CarouselContent
         className={cn(
           type == "suggestions"
-            ? "max-h-[20vh] md:max-h-[55vh] min-w-40 gap-0"
+            ? "max-h-[40vh] md:max-h-[60vh] min-w-40 gap-0"
             : "max-h-[20vh] md:max-h-[65vh] z-0"
         )}>
         {animes?.map((anime) => (
-          <CarouselItem key={anime.id} className="m-0 min-h-[9.4rem] max-h-[9.4rem] z-0 overflow-hidden">
+          <CarouselItem key={anime.id} className=" z-0 overflow-hidden">
             <AnimeHorizontalCard anime={anime} type={type} />
           </CarouselItem>
         ))}

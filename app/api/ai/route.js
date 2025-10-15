@@ -5,7 +5,7 @@ export const POST = async (req) => {
   let content;
   if (type == "string") {
     content = {
-      "type": "text", "text": `Recommend exactly 10 anime that are similar or related to the theme/concept described in: '${prompt}'. 
+      "type": "text", "text": `Recommend exactly 10 anime that are related to the prompt: '${prompt}'. 
 
 STRICT REQUIREMENTS:
 - Return ONLY a valid JSON object with no additional text, explanations, or formatting
@@ -13,7 +13,7 @@ STRICT REQUIREMENTS:
 - Do NOT include any anime mentioned in the original prompt
 - Use official English titles only (no Japanese titles, no romaji)
 - Include mature/18+ content if relevant to the recommendation
-- Ensure all 7 recommendations are genuinely related to the prompt's theme
+- Ensure all recommendations are genuinely related to the prompt's theme
 - Do not number the items in the array
 - Do not include any trailing commas in the JSON`};
   }
@@ -52,11 +52,11 @@ STRICT REQUIREMENTS:
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "mistralai/devstral-small:free",
+        model: "google/gemini-2.0-flash-exp:free",
         messages: [
           {
             role: "user",
-            content: content,
+            content: [content],
           },
         ],
       }),

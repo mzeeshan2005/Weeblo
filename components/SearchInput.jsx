@@ -136,7 +136,7 @@ const SearchInput = () => {
           {!fetchLoading ? (
             <AnimeVerticalCarousel
               animes={searchSuggestions?.suggestions}
-              type={isAiSearch ? "Ai Suggestions" : "suggestions"}
+              type={"suggestions"}
             />
           ) : (
             <Skeleton className="w-screen sm:w-full cursor-pointer border-none z-0 flex items-start p-2 space-x-2">

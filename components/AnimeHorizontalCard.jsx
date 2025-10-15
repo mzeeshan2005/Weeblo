@@ -14,7 +14,7 @@ const AnimeHorizontalCard = ({ anime, type }) => {
     const special=type=="Most Popular Animes" || type=="Most Favorite Animes" || type=="Latest Completed Animes"
 
     return (
-        <div className={cn("w-full z-0", type == "suggestions" && "w-screen sm:w-full")}>
+        <div className={cn("w-full z-0 h-full", type == "suggestions" && "w-screen sm:w-full")}>
             <Link href={`/animeInfo/${encodeURIComponent(anime.id)}`} >
                 <Card className="cursor-pointer border-none z-0">
                     <CardContent className="flex items-start p-2 space-x-2 z-0">
