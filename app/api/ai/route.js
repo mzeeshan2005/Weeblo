@@ -5,7 +5,16 @@ export const POST = async (req) => {
   let content;
   if (type == "string") {
     content = {
-      "type": "text", "text": `${prompt}`
+      "type": "text", "text": `You are a helpful assistant that helps users find anime recommendations .Recommend exactly 8 anime that are related to the prompt given : ${prompt} .'. 
+STRICT REQUIREMENTS:
+- Return ONLY a valid JSON object with no additional text, explanations, or formatting
+- JSON format must be exactly: {"anime_recommendations": ["Anime 1", "Anime 2", "Anime 3", "Anime 4", "Anime 5", "Anime 6", "Anime 7"]}
+- Do NOT include any anime mentioned in the original prompt
+- Use official English titles only from famous anime sources like gogoanime or hianime (no Japanese titles, no romaji)
+- Include mature/18+ content if relevant to the recommendation
+- Ensure all recommendations are genuinely related to the prompt's theme
+- Do not number the items in the array
+- Do not include any trailing commas in the JSON`
     };
   }
   try {
@@ -20,19 +29,6 @@ export const POST = async (req) => {
       body: JSON.stringify({
         model: "google/gemma-3-4b-it:free",
         messages: [
-          {
-            role: "system",
-            content: `You are a helpful assistant that helps users find anime recommendations .Recommend exactly 10 anime that are related to the prompt given'. 
-STRICT REQUIREMENTS:
-- Return ONLY a valid JSON object with no additional text, explanations, or formatting
-- JSON format must be exactly: {"anime_recommendations": ["Anime 1", "Anime 2", "Anime 3", "Anime 4", "Anime 5", "Anime 6", "Anime 7"]}
-- Do NOT include any anime mentioned in the original prompt
-- Use official English titles only (no Japanese titles, no romaji)
-- Include mature/18+ content if relevant to the recommendation
-- Ensure all recommendations are genuinely related to the prompt's theme
-- Do not number the items in the array
-- Do not include any trailing commas in the JSON`,
-          },
           {
             role: "user",
             content: [content],
@@ -59,19 +55,6 @@ STRICT REQUIREMENTS:
       body: JSON.stringify({
         model: "google/gemini-2.0-flash-exp:free",
         messages: [
-          {
-            role: "system",
-            content: `You are a helpful assistant that helps users find anime recommendations .Recommend exactly 10 anime that are related to the prompt given'. 
-STRICT REQUIREMENTS:
-- Return ONLY a valid JSON object with no additional text, explanations, or formatting
-- JSON format must be exactly: {"anime_recommendations": ["Anime 1", "Anime 2", "Anime 3", "Anime 4", "Anime 5", "Anime 6", "Anime 7"]}
-- Do NOT include any anime mentioned in the original prompt
-- Use official English titles only (no Japanese titles, no romaji)
-- Include mature/18+ content if relevant to the recommendation
-- Ensure all recommendations are genuinely related to the prompt's theme
-- Do not number the items in the array
-- Do not include any trailing commas in the JSON`,
-          },
           {
             role: "user",
             content: [content],

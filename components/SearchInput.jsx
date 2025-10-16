@@ -59,7 +59,6 @@ const SearchInput = () => {
 
       const data = await resp.json();
       const suggestions = parseJSON(data?.body.message || "{}")?.anime_recommendations;
-
       const results = await Promise.all(
         suggestions?.map(async (sug) => {
           try {
@@ -74,7 +73,6 @@ const SearchInput = () => {
           }
         })
       );
-
       const filteredResults = results.filter(Boolean);
       setSearchSuggestions({ suggestions: filteredResults });
     } catch (error) {
@@ -136,7 +134,7 @@ const SearchInput = () => {
           {!fetchLoading ? (
             <AnimeVerticalCarousel
               animes={searchSuggestions?.suggestions}
-              type={"suggestions"}
+              type={isAiSearch ? "Ai Suggestions" : "suggestions"}
             />
           ) : (
             <Skeleton className="w-screen sm:w-full cursor-pointer border-none z-0 flex items-start p-2 space-x-2">

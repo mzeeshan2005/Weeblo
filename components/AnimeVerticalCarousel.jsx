@@ -63,9 +63,9 @@ const AnimeVerticalCarousel = ({ animes, type, page }) => {
       )}
       <CarouselContent
         className={cn(
-          type == "suggestions"
+          type == "suggestions" || type == "Ai Suggestions"
             ? "max-h-[40vh] md:max-h-[60vh] min-w-40 gap-0"
-            : "max-h-[20vh] md:max-h-[65vh] z-0"
+            : "max-h-[16vh] md:max-h-[65vh] z-0"
         )}>
         {animes?.map((anime) => (
           <CarouselItem key={anime.id} className=" z-0 overflow-hidden">
