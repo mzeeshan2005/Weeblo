@@ -1,25 +1,44 @@
 "use client";
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import { DiscussionEmbed } from "disqus-react";
 import { ChevronDown, ChevronUp } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Bakbak_One } from "next/font/google";
 import { Button } from "./ui/button";
 import { useTheme } from "next-themes";
+
 const bakbak_one = Bakbak_One({
   weight: ["400"],
   style: "normal",
   subsets: ["latin"],
 });
+
 const DisqusComments = ({ episode }) => {
   const [openEps, setOpenEps] = useState(false);
-  const theme = useTheme();
+  const { theme, systemTheme } = useTheme();
   const disqusShortname = "weeblo";
-  const config = {
-    url: window ? window.location.href : "",
-    identifier: `${episode.animeId}?ep=${episode.epNumber}`,
-    title: episode.title,
-  };
+
+  // Get effective theme
+  const effectiveTheme = useMemo(() => {
+    return theme === "system" ? systemTheme : theme;
+  }, [theme, systemTheme]);
+
+  // Create config
+  const config = useMemo(
+    () => ({
+      url: typeof window !== "undefined" ? window.location.href : "",
+      identifier: `${episode.animeId}?ep=${episode.epNumber}`,
+      title: episode.title,
+    }),
+    [episode.animeId, episode.epNumber, episode.title]
+  );
+
+  // Create unique key that changes when theme or identifier changes
+  const disqusKey = useMemo(
+    () => `disqus-${effectiveTheme}-${config.identifier}`,
+    [effectiveTheme, config.identifier]
+  );
+
   return (
     <>
       <div className=" w-full top-0 flex mb-2 justify-between items-center z-10">
@@ -51,7 +70,7 @@ const DisqusComments = ({ episode }) => {
             className="p-0 text-secondary"
             shortname={disqusShortname}
             config={config}
-            key={`${theme}+${config.identifier}`}
+            key={disqusKey}
           />
         </div>
       </div>

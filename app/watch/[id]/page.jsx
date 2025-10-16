@@ -1,5 +1,5 @@
 "use client";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import dynamic from "next/dynamic";
 import { usePathname, useRouter } from "next/navigation";
 import { useSearchParams } from "next/navigation";
@@ -26,37 +26,44 @@ import {
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import Link from "next/link";
 import { Separator } from "@/components/ui/separator";
+
 const VideoPlayer = dynamic(() => import("@/components/VideoPlayer"), {
   loading: () => (
-    <Loader className="mx-auto  my-[9.4rem] relative bottom-0 w-6 animate-spin text-primary" />
+    <Loader className="mx-auto my-[9.4rem] relative bottom-0 w-6 animate-spin text-primary" />
   ),
 });
+
 const AnimeVerticalCarousel = dynamic(
   () => import("@/components/AnimeVerticalCarousel"),
   {
     loading: () => (
-      <Loader className="mx-auto  my-[9.4rem] relative bottom-0 w-6 animate-spin text-primary" />
+      <Loader className="mx-auto my-[9.4rem] relative bottom-0 w-6 animate-spin text-primary" />
     ),
   }
 );
+
 const EpisodesList = dynamic(() => import("@/components/EpisodesList"), {
   loading: () => (
     <Loader className="mx-auto my-[47vh] relative bottom-0 w-6 animate-spin text-primary" />
   ),
 });
+
 const EpDetail = dynamic(() => import("@/components/EpDetail"), {
   loading: () => (
     <Loader className="mx-auto relative bottom-0 w-6 animate-spin text-primary" />
   ),
 });
+
 const DisqusComments = dynamic(() => import("@/components/DisqusComments"), {
   loading: () => (
     <Loader className="mx-auto relative bottom-0 w-6 animate-spin text-primary" />
   ),
 });
+
 const ScrollTopButton = React.lazy(() =>
   import("@/components/ScrollTopButton")
 );
+
 import { useAppContext } from "@/context/page";
 import GenerateRoom from "@/components/GenerateRoom";
 
@@ -87,8 +94,8 @@ export default function WatchPage({ params: { id } }) {
   // Loading states
   const [isClient, setIsClient] = useState(false);
   const [fetchLoading, setfetchLoading] = useState(true);
-  const [serverLoading, setServerLoading] = useState(null);
-  const [fetchLoading2, setfetchLoading2] = useState(null);
+  const [serverLoading, setServerLoading] = useState(false);
+  const [fetchLoading2, setfetchLoading2] = useState(false);
 
   // Data states
   const [episodesResults, setEpisodesResults] = useState(null);
@@ -115,320 +122,274 @@ export default function WatchPage({ params: { id } }) {
     }
   }, []);
 
-  // Save preferences to localStorage whenever they change
+  // Save preferences to localStorage
   useEffect(() => {
     if (isClient) {
       setUserPreferencesToLocalStorage(userPreferences);
     }
   }, [userPreferences, isClient]);
 
-  // Fetch episodes
-  const fetchEpisodes = async () => {
-    try {
-      setfetchLoading(true);
-      const res = await getAnimeEpisodes(animeId);
-      setEpisodesResults(res);
-    } catch (error) {
-      console.error("Error fetching episodes:", error);
-    } finally {
-      setfetchLoading(false);
-    }
-  };
-
-  // Fetch episode servers
-  const fetchEpServers = async () => {
-    if (!currentEp) return;
-    try {
-      const res = await getAnimeEpisodeServers(currentEp.episodeId);
-      setEpisodeServers(res);
-    } catch (error) {
-      console.error("Error fetching episode servers:", error);
-    }
-  };
-
-  // Fetch episode server link
-  const fetchEpServerLink = async () => {
-    if (!currentServerType) return;
-    try {
-      setServerLoading(true);
-      const res = await getAnimeEpisodeServerLink(
-        currentEp?.episodeId,
-        "hd-2",
-        currentServerType
-      );
-      setEpisodeServerLink(res);
-    } catch (error) {
-      console.error("Error fetching episode server link:", error);
-    } finally {
-      setServerLoading(false);
-    }
-  };
-
-  // Fetch anime info
-  const fetchInfo = async () => {
-    try {
-      setfetchLoading2(true);
-      const res = await getAnimeInfo(animeId);
-      setAnimeInfo(res);
-    } catch (error) {
-      console.error("Error fetching anime info:", error);
-    } finally {
-      setfetchLoading2(false);
-    }
-  };
-
-  // Fetch extra anime info
-  const fetchExtraInfo = async () => {
-    if (!animeInfo?.anime?.info?.name) return;
-    try {
-      setfetchLoading2(true);
-      const res = await getAnimeExtraInfo(
-        animeInfo?.anime?.info?.name,
-        animeInfo?.anime?.moreInfo?.japanese
-      );
-      setAnimeExtraInfo(res);
-    } catch (error) {
-      console.error("Error fetching extra info:", error);
-    } finally {
-      setfetchLoading2(false);
-    }
-  };
-
-  // Fetch episode info
-  const fetchEPInfo = async () => {
-    try {
-      setfetchLoading2(true);
-      if (!animeExtraInfo?.episodes || !currentEp) return;
-
-      const res = await fetch(animeExtraInfo?.episodes, {
-        headers: {
-          Accept: "application/vnd.api+json",
-          "Content-Type": "application/vnd.api+json",
-        },
-        next: {
-          revalidate: 60 * 60 * 24,
-        },
-      });
-
-      const epsData = await res.json();
-      if (epsData.data.length < currentEp?.number) {
-        setEpInfo(null);
-        return;
-      }
-
-      const epId = epsData.data[currentEp?.number - 1].id;
-      const epDetailRes = await getEpisodeDetail(epId);
-      setEpInfo(epDetailRes);
-    } catch (error) {
-      console.error("Error fetching episode data:", error);
-    } finally {
-      setfetchLoading2(false);
-    }
-  };
-
-  // Continue watching handler
-  const continueWatchingHandler = async () => {
-    if (!user?.email || !animeInfo?.anime?.info?.name) return;
-
-    const continueWatchingData = {
-      animeId,
-      name: animeInfo?.anime?.info?.name,
-      poster: animeInfo?.anime?.info?.poster,
-      continueTime: playedTime,
-      totalTime: totalTime,
-      episodeNumber: currentEp?.number,
-      userEmail: user.email,
-    };
-
-    try {
-      const response = await fetch("/api/continueAnime", {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(continueWatchingData),
-      });
-
-      const data = await response.json();
-      if (data.status === 200) {
-        const updatedAnime = {
-          animeId: continueWatchingData.animeId,
-          continueTime: continueWatchingData.continueTime,
-          totalTime: continueWatchingData.totalTime,
-          episodeNumber: continueWatchingData.episodeNumber,
-          name: continueWatchingData.name,
-          poster: continueWatchingData.poster,
-        };
-
-        const index = user.continueWatching.findIndex(
-          (anime) => anime.animeId === continueWatchingData.animeId
-        );
-
-        const updatedUser = {
-          ...user,
-          continueWatching: [...user.continueWatching],
-        };
-
-        if (index !== -1) {
-          updatedUser.continueWatching.splice(index, 1);
-          updatedUser.continueWatching.unshift(updatedAnime);
-        } else {
-          updatedUser.continueWatching.unshift(updatedAnime);
-        }
-        setUser(updatedUser);
-      }
-    } catch (error) {
-      console.error("Continue watching error:", error);
-    }
-  };
-
-  // Handle checkbox changes
-  const handleCheckboxChange = (key, value) => {
-    setUserPreferences((prevState) => ({
-      ...prevState,
-      [key]: value,
-    }));
-  };
-
-  // Initial fetch - when animeId is available
+  // Initial data fetch
   useEffect(() => {
     if (!animeId || !isClient) return;
-    fetchEpisodes();
-    fetchInfo();
+
+    const fetchInitialData = async () => {
+      try {
+        setfetchLoading(true);
+        const [episodes, info] = await Promise.all([
+          getAnimeEpisodes(animeId),
+          getAnimeInfo(animeId),
+        ]);
+        setEpisodesResults(episodes);
+        setAnimeInfo(info);
+      } catch (error) {
+        console.error("Error fetching initial data:", error);
+      } finally {
+        setfetchLoading(false);
+      }
+    };
+
+    fetchInitialData();
   }, [animeId, isClient]);
 
-  // Set current episode based on query params
+  // Set current episode from URL params
   useEffect(() => {
     if (!episodesResults?.episodes) return;
+
     const epNumber = searchParams?.get("ep");
     const epIndex = epNumber ? Number(epNumber) - 1 : 0;
     const validIndex =
       epIndex >= 0 && epIndex < episodesResults.episodes.length
         ? epIndex
         : episodesResults.episodes.length - 1;
-    setCurrentEp(episodesResults.episodes[validIndex]);
-  }, [episodesResults, searchParams]);
 
-  // Fetch servers when episode changes
-  useEffect(() => {
-    if (!currentEp || !isClient) return;
-    fetchEpServers();
-  }, [currentEp, isClient]);
+    const episode = episodesResults.episodes[validIndex];
+    setCurrentEp(episode);
+    setEpisodeServerLink(null); // Clear old link
+  }, [episodesResults?.episodes, searchParams]);
 
-  // Set server type based on available servers
+  // Fetch servers and info for current episode
   useEffect(() => {
-    if (!episodeServers || !isClient) return;
-    setCurrentServerType((prevState) =>
-      episodeServers?.dub?.length > 0 ? prevState : "sub"
+    if (!currentEp?.episodeId || !isClient) return;
+
+    const fetchEpisodeData = async () => {
+      try {
+        const servers = await getAnimeEpisodeServers(currentEp.episodeId);
+        setEpisodeServers(servers);
+      } catch (error) {
+        console.error("Error fetching servers:", error);
+      }
+    };
+
+    fetchEpisodeData();
+  }, [currentEp?.episodeId, isClient]);
+
+  // Determine server type
+  useEffect(() => {
+    if (!episodeServers) return;
+    setCurrentServerType((prev) =>
+      episodeServers?.dub?.length > 0 ? prev : "sub"
     );
-  }, [episodeServers, isClient]);
+  }, [episodeServers]);
 
-  // Fetch server link when server type or episode changes
+  // Fetch episode link - THIS IS THE CRITICAL EFFECT
   useEffect(() => {
-    if (!currentEp || !isClient) return;
-    fetchEpServerLink();
-  }, [currentServerType, currentEp, isClient]);
+    if (!currentEp?.episodeId || !currentServerType || !isClient) {
+      return;
+    }
 
-  // Fetch extra info and episode info when anime info is available
+    const fetchLink = async () => {
+      try {
+        setServerLoading(true);
+        setEpisodeServerLink(null); // Clear before fetching
+        const link = await getAnimeEpisodeServerLink(
+          currentEp.episodeId,
+          "hd-2",
+          currentServerType
+        );
+        setEpisodeServerLink(link);
+      } catch (error) {
+        console.error("Error fetching episode link:", error);
+        setEpisodeServerLink(null);
+      } finally {
+        setServerLoading(false);
+      }
+    };
+
+    fetchLink();
+  }, [currentEp?.episodeId, currentServerType, isClient]);
+
+  // Fetch extra anime info
   useEffect(() => {
     if (!animeInfo?.anime?.info?.name || !isClient) return;
-    fetchExtraInfo();
-    if (
-      animeInfo?.anime?.info?.stats?.type === "TV" ||
-      animeInfo?.anime?.info?.stats?.type === "OVA" ||
-      animeInfo?.anime?.info?.stats?.type === "Special" ||
-      animeInfo?.anime?.info?.stats?.type === "ONA"
-    ) {
-      fetchEPInfo();
-    }
-  }, [animeInfo, isClient]);
 
-  // Fetch episode info when extra info or current episode changes
+    const fetchExtra = async () => {
+      try {
+        setfetchLoading2(true);
+        const extra = await getAnimeExtraInfo(
+          animeInfo.anime.info.name,
+          animeInfo.anime.moreInfo?.japanese
+        );
+        setAnimeExtraInfo(extra);
+      } catch (error) {
+        console.error("Error fetching extra info:", error);
+      } finally {
+        setfetchLoading2(false);
+      }
+    };
+
+    fetchExtra();
+  }, [animeInfo?.anime?.info?.name, animeInfo?.anime?.moreInfo?.japanese, isClient]);
+
+  // Fetch episode details
   useEffect(() => {
     if (
-      !animeInfo?.anime?.info?.name ||
-      !currentEp ||
+      !animeExtraInfo?.episodes ||
+      !currentEp?.number ||
       !isClient ||
-      !animeExtraInfo
+      !animeInfo?.anime?.info?.stats?.type
     )
       return;
 
-    if (
-      animeInfo?.anime?.info?.stats?.type === "TV" ||
-      animeInfo?.anime?.info?.stats?.type === "OVA" ||
-      animeInfo?.anime?.info?.stats?.type === "Special" ||
-      animeInfo?.anime?.info?.stats?.type === "ONA"
-    ) {
-      fetchEPInfo();
-    }
-  }, [animeExtraInfo, currentEp, isClient]);
+    const animeType = animeInfo.anime.info.stats.type;
+    const isSeriesType =
+      animeType === "TV" ||
+      animeType === "OVA" ||
+      animeType === "Special" ||
+      animeType === "ONA";
+
+    if (!isSeriesType) return;
+
+    const fetchDetails = async () => {
+      try {
+        setfetchLoading2(true);
+        const res = await fetch(animeExtraInfo.episodes, {
+          headers: {
+            Accept: "application/vnd.api+json",
+            "Content-Type": "application/vnd.api+json",
+          },
+        });
+
+        const epsData = await res.json();
+        if (epsData.data.length < currentEp.number) {
+          setEpInfo(null);
+          return;
+        }
+
+        const epId = epsData.data[currentEp.number - 1].id;
+        const details = await getEpisodeDetail(epId);
+        setEpInfo(details);
+      } catch (error) {
+        console.error("Error fetching episode details:", error);
+      } finally {
+        setfetchLoading2(false);
+      }
+    };
+
+    fetchDetails();
+  }, [animeExtraInfo?.episodes, currentEp?.number, isClient, animeInfo?.anime?.info?.stats?.type]);
 
   // Update page title
   useEffect(() => {
     if (!animeInfo?.anime?.info?.name || !isClient) return;
-    window.document.title =
-      "Weeblo - Watch " + animeInfo?.anime?.info?.name;
-  }, [animeInfo, isClient]);
+    window.document.title = "Weeblo - Watch " + animeInfo.anime.info.name;
+  }, [animeInfo?.anime?.info?.name, isClient]);
 
-  // Next episode handler
-  const nextEp = () => {
-    if (currentEp?.number < episodesResults?.episodes.length) {
-      router.push(`${pathname}?ep=${currentEp?.number + 1}`);
+  // Handle checkbox changes
+  const handleCheckboxChange = useCallback((key, value) => {
+    setUserPreferences((prev) => ({
+      ...prev,
+      [key]: value,
+    }));
+  }, []);
+
+  // Navigation handlers
+  const nextEp = useCallback(() => {
+    if (!currentEp || !episodesResults?.episodes) return;
+    if (currentEp.number < episodesResults.episodes.length) {
+      router.push(`${pathname}?ep=${currentEp.number + 1}`);
       setEpEnded(false);
     }
-  };
+  }, [currentEp, episodesResults?.episodes, router, pathname]);
 
-  // Previous episode handler
-  const prevEp = () => {
-    if (currentEp?.number > 1) {
-      router.push(`${pathname}?ep=${currentEp?.number - 1}`);
+  const prevEp = useCallback(() => {
+    if (!currentEp) return;
+    if (currentEp.number > 1) {
+      router.push(`${pathname}?ep=${currentEp.number - 1}`);
       setEpEnded(false);
     }
-  };
+  }, [currentEp, router, pathname]);
 
-  // Auto next episode when ended
+  // Auto next episode
   useEffect(() => {
     if (epEnded && userPreferences?.AutoNext) {
       nextEp();
     }
-  }, [epEnded, userPreferences?.AutoNext]);
+  }, [epEnded, userPreferences?.AutoNext, nextEp]);
 
-  // Continue watching update
+  // Continue watching
   useEffect(() => {
-    if (
-      !user?.email ||
-      !playedTime ||
-      !totalTime ||
-      Math.floor(playedTime % 2) !== 0 ||
-      Math.round(playedTime % 2) !== 0
-    )
+    if (!user?.email || !playedTime || !totalTime || Math.floor(playedTime % 2) !== 0)
       return;
-    continueWatchingHandler();
-  }, [playedTime, totalTime, user?.email]);
+
+    const saveContinueWatching = async () => {
+      try {
+        const data = {
+          animeId,
+          name: animeInfo?.anime?.info?.name,
+          poster: animeInfo?.anime?.info?.poster,
+          continueTime: playedTime,
+          totalTime,
+          episodeNumber: currentEp?.number,
+          userEmail: user.email,
+        };
+
+        const response = await fetch("/api/continueAnime", {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(data),
+        });
+
+        const result = await response.json();
+        if (result.status === 200) {
+          const updatedAnime = { ...data };
+          const index = user.continueWatching.findIndex(
+            (a) => a.animeId === data.animeId
+          );
+
+          const updatedUser = { ...user, continueWatching: [...user.continueWatching] };
+          if (index !== -1) {
+            updatedUser.continueWatching.splice(index, 1);
+          }
+          updatedUser.continueWatching.unshift(updatedAnime);
+          setUser(updatedUser);
+        }
+      } catch (error) {
+        console.error("Continue watching error:", error);
+      }
+    };
+
+    saveContinueWatching();
+  }, [playedTime, totalTime, user?.email, currentEp?.number, animeId, animeInfo?.anime?.info?.name, animeInfo?.anime?.info?.poster, user, setUser]);
 
   // Set continue watch time
   useEffect(() => {
     if (!user?.continueWatching || !currentEp || !isClient) return;
-    const anime = user.continueWatching.find(
-      (anime) => anime.animeId === animeId
-    );
+    const anime = user.continueWatching.find((a) => a.animeId === animeId);
     if (anime?.episodeNumber === currentEp.number) {
       setContinueWatchTime(anime.continueTime);
     } else {
       setContinueWatchTime(null);
     }
-  }, [user?.continueWatching, currentEp, serverLoading, isClient, animeId]);
+  }, [user?.continueWatching, currentEp, isClient, animeId]);
 
-  // Copy URL handler
-  const handleCopyUrl = () => {
-    const currentUrl = window.location.href;
-    navigator.clipboard.writeText(currentUrl).then(() => {
+  // Copy URL
+  const handleCopyUrl = useCallback(() => {
+    navigator.clipboard.writeText(window.location.href).then(() => {
       setShared(true);
-      setTimeout(() => {
-        setShared(false);
-      }, 3000);
+      setTimeout(() => setShared(false), 3000);
     });
-  };
+  }, []);
 
   // Loading state
   if (!isClient || fetchLoading) {
@@ -439,7 +400,6 @@ export default function WatchPage({ params: { id } }) {
     );
   }
 
-  // Guard against missing animeId
   if (!animeId) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -458,11 +418,11 @@ export default function WatchPage({ params: { id } }) {
             )}
             {!serverLoading && episodeServerLink?.sources?.[0]?.url && (
               <VideoPlayer
-                Url={episodeServerLink?.sources[0]?.url}
-                tracks={episodeServerLink?.tracks}
-                type={episodeServerLink?.sources[0]?.type}
-                outro={episodeServerLink?.outro}
-                intro={episodeServerLink?.intro}
+                Url={episodeServerLink.sources[0].url}
+                tracks={episodeServerLink.tracks}
+                type={episodeServerLink.sources[0].type}
+                outro={episodeServerLink.outro}
+                intro={episodeServerLink.intro}
                 setEpEnded={setEpEnded}
                 userPreferences={userPreferences}
                 setUserPreferences={setUserPreferences}
@@ -488,9 +448,7 @@ export default function WatchPage({ params: { id } }) {
                 onClick={prevEp}
                 id="prev">
                 <StepBack className="w-4" />
-                <label
-                  htmlFor="prev"
-                  className="cursor-pointer font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+                <label htmlFor="prev" className="cursor-pointer font-medium leading-none">
                   Prev
                 </label>
               </Button>
@@ -499,9 +457,7 @@ export default function WatchPage({ params: { id } }) {
                 className="flex items-center space-x-1 p-0"
                 onClick={nextEp}
                 id="next">
-                <label
-                  htmlFor="next"
-                  className="cursor-pointer font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+                <label htmlFor="next" className="cursor-pointer font-medium leading-none">
                   Next
                 </label>
                 <StepForward className="w-4" />
@@ -509,38 +465,26 @@ export default function WatchPage({ params: { id } }) {
               <div className="flex items-center space-x-2">
                 <Checkbox
                   checked={userPreferences?.AutoPlay || false}
-                  onCheckedChange={(checked) =>
-                    handleCheckboxChange("AutoPlay", checked)
-                  }
+                  onCheckedChange={(checked) => handleCheckboxChange("AutoPlay", checked)}
                   id="autoPlay"
                 />
-                <label
-                  htmlFor="autoPlay"
-                  className="font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+                <label htmlFor="autoPlay" className="font-medium leading-none">
                   Auto Play
                 </label>
               </div>
               <div className="flex items-center space-x-2">
                 <Checkbox
                   checked={userPreferences?.AutoNext !== false}
-                  onCheckedChange={(checked) =>
-                    handleCheckboxChange("AutoNext", checked)
-                  }
+                  onCheckedChange={(checked) => handleCheckboxChange("AutoNext", checked)}
                   id="autoNext"
                 />
-                <label
-                  htmlFor="autoNext"
-                  className="font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+                <label htmlFor="autoNext" className="font-medium leading-none">
                   Auto Next
                 </label>
               </div>
             </div>
 
-            <h1
-              className={cn(
-                "text-2xl md:text-3xl font-bold",
-                bebas_nueue.className
-              )}>
+            <h1 className={cn("text-2xl md:text-3xl font-bold", bebas_nueue.className)}>
               {animeInfo?.anime?.info?.stats?.type !== "TV"
                 ? animeInfo?.anime?.info?.name + " - " + currentEp?.title
                 : currentEp?.number + " - " + currentEp?.title}
@@ -555,7 +499,7 @@ export default function WatchPage({ params: { id } }) {
                         <Share2
                           className={cn(
                             "hover:text-primary",
-                            shared && "text-secondary hover:text-secondary"
+                            shared && "text-secondary"
                           )}
                         />
                       </Button>
@@ -570,12 +514,12 @@ export default function WatchPage({ params: { id } }) {
                     <Tooltip>
                       <TooltipTrigger asChild>
                         <GenerateRoom
-                          name={animeInfo?.anime?.info?.name}
-                          epNo={currentEp?.number}
-                          epId={currentEp?.episodeId}
+                          name={animeInfo.anime.info.name}
+                          epNo={currentEp.number}
+                          epId={currentEp.episodeId}
                           category={currentServerType}
-                          poster={animeInfo?.anime?.info?.poster}
-                          host={user?._id}
+                          poster={animeInfo.anime.info.poster}
+                          host={user._id}
                         />
                       </TooltipTrigger>
                       <TooltipContent>
@@ -589,28 +533,17 @@ export default function WatchPage({ params: { id } }) {
                 <ToggleGroup
                   type="single"
                   value={currentServerType}
-                  onValueChange={(e) => {
-                    if (e) setCurrentServerType(e);
-                  }}>
+                  onValueChange={(e) => e && setCurrentServerType(e)}>
                   {episodeServers?.raw?.length > 0 && (
-                    <ToggleGroupItem
-                      value="raw"
-                      aria-label="Raw"
-                      className="text-xs focus:bg-primary/50 data-[state=on]:bg-primary/50 rounded-sm">
+                    <ToggleGroupItem value="raw" className="text-xs rounded-sm">
                       Raw
                     </ToggleGroupItem>
                   )}
-                  <ToggleGroupItem
-                    value="sub"
-                    aria-label="Original"
-                    className="text-xs focus:bg-primary/50 data-[state=on]:bg-primary/50 rounded-sm">
+                  <ToggleGroupItem value="sub" className="text-xs rounded-sm">
                     Original
                   </ToggleGroupItem>
                   {episodeServers?.dub?.length > 0 && (
-                    <ToggleGroupItem
-                      value="dub"
-                      aria-label="Dubbed"
-                      className="text-xs focus:bg-primary/50 data-[state=on]:bg-primary/50 rounded-sm">
+                    <ToggleGroupItem value="dub" className="text-xs rounded-sm">
                       Dubbed
                     </ToggleGroupItem>
                   )}
@@ -628,15 +561,13 @@ export default function WatchPage({ params: { id } }) {
                     src={animeInfo?.anime?.info?.poster}
                   />
                 </Avatar>
-                <span className="text-sm font-semibold">
-                  {animeInfo?.anime?.info?.name}
-                </span>
+                <span className="text-sm font-semibold">{animeInfo?.anime?.info?.name}</span>
               </Link>
             </div>
 
             <div className="mt-4 space-y-2">
               {fetchLoading2 ? (
-                <Loader className="mx-auto my-auto h-6 w-6 animate-spin text-secondary" />
+                <Loader className="mx-auto h-6 w-6 animate-spin text-secondary" />
               ) : (
                 <EpDetail
                   epInfo={epInfo}
@@ -657,9 +588,9 @@ export default function WatchPage({ params: { id } }) {
               {currentEp && (
                 <DisqusComments
                   episode={{
-                    title: currentEp?.title,
+                    title: currentEp.title,
                     animeId: animeId,
-                    epNumber: currentEp?.number,
+                    epNumber: currentEp.number,
                   }}
                 />
               )}
