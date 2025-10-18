@@ -192,7 +192,7 @@ export default function WatchPage({ params: { id } }) {
     );
   }, [episodeServers]);
 
-  // Fetch episode link - THIS IS THE CRITICAL EFFECT
+  // Fetch episode link
   useEffect(() => {
     if (!currentEp?.episodeId || !currentServerType || !isClient) {
       return;
@@ -201,7 +201,7 @@ export default function WatchPage({ params: { id } }) {
     const fetchLink = async () => {
       try {
         setServerLoading(true);
-        setEpisodeServerLink(null); // Clear before fetching
+        setEpisodeServerLink(null);
         const link = await getAnimeEpisodeServerLink(
           currentEp.episodeId,
           "hd-2",
