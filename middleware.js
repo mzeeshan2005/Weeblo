@@ -23,7 +23,7 @@ if (hasUpstashEnv) {
 
   pageLimiter = new Ratelimit({
     redis,
-    limiter: Ratelimit.slidingWindow(30, "1 m"), // 30 requests/min for pages
+    limiter: Ratelimit.slidingWindow(25, "1 m"), // 25 requests/min for pages
   });
 }
 
