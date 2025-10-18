@@ -26,6 +26,13 @@ This project uses this package for getting anime data:
 NEXT_PUBLIC_ANIWATCH_URL= Your Deployed Backend URL
 ```
 
+Also create an Database on Upstash and save these envs also (for rate limiting) :
+
+```bash
+UPSTASH_REDIS_REST_URL=https://example-url-12321.upstash.io
+UPSTASH_REDIS_REST_TOKEN=Your Redis Token
+```
+
 First, run the development server:
 
 ```bash
