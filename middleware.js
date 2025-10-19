@@ -6,6 +6,10 @@ import { Redis } from "@upstash/redis";
 const hasUpstashEnv =
   process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN;
 
+// Default or ENV-based limits
+const API_LIMIT = parseInt(process.env.RATE_LIMIT_API || "100", 10); 
+const PAGE_LIMIT = parseInt(process.env.RATE_LIMIT_PAGE || "200", 10);
+
 let apiLimiter = null;
 let pageLimiter = null;
 
@@ -17,17 +21,17 @@ if (hasUpstashEnv) {
 
   apiLimiter = new Ratelimit({
     redis,
-    limiter: Ratelimit.slidingWindow(55, "1 m"), // 55 requests/min for API
+    limiter: Ratelimit.slidingWindow(API_LIMIT, "1 m"),
   });
 
   pageLimiter = new Ratelimit({
     redis,
-    limiter: Ratelimit.slidingWindow(125, "1 m"), // 125 requests/min for pages
+    limiter: Ratelimit.slidingWindow(PAGE_LIMIT, "1 m"),
   });
 }
 
 export async function middleware(request) {
-  // If no envs → skip rate limiting
+  // Skip rate limiting if no Upstash setup
   if (!hasUpstashEnv) {
     return NextResponse.next();
   }
@@ -37,11 +41,8 @@ export async function middleware(request) {
     request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
     "127.0.0.1";
 
-  // Detect route type
   const isAPI = url.pathname.startsWith("/api");
   const limiter = isAPI ? apiLimiter : pageLimiter;
-
-  // Limit by user IP (or userId if authenticated)
   const identifier = ip;
 
   try {
