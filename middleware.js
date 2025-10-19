@@ -9,7 +9,6 @@ const hasUpstashEnv =
 let apiLimiter = null;
 let pageLimiter = null;
 
-// Initialize rate limiters only if envs are available
 if (hasUpstashEnv) {
   const redis = new Redis({
     url: process.env.UPSTASH_REDIS_REST_URL,
@@ -18,12 +17,12 @@ if (hasUpstashEnv) {
 
   apiLimiter = new Ratelimit({
     redis,
-    limiter: Ratelimit.slidingWindow(10, "1 m"), // 10 requests/min for API
+    limiter: Ratelimit.slidingWindow(55, "1 m"), // 55 requests/min for API
   });
 
   pageLimiter = new Ratelimit({
     redis,
-    limiter: Ratelimit.slidingWindow(25, "1 m"), // 25 requests/min for pages
+    limiter: Ratelimit.slidingWindow(125, "1 m"), // 125 requests/min for pages
   });
 }
 
