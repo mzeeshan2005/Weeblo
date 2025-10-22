@@ -39,7 +39,7 @@ const AnimeHorizontalCard = ({ anime, type }) => {
                                 }
                                 </Badge>
                             </div>
-                            <p className={cn("text-2xl ", bebas_nueue.className, type == "suggestions" && "text-xl")}>{anime.name.length > 50 ? anime.name.slice(0, 50) + "..." : anime.name}</p>
+                            <p className={cn("text-2xl ", bebas_nueue.className, type == "suggestions" && "text-xl")}>{anime?.name?.length > 50 ? anime?.name?.slice(0, 50) + "..." : anime.name}</p>
                             {!special &&
                             <div className="flex justify-end items-center space-x-1 text-sm">
                                 {

@@ -45,7 +45,7 @@ const RemoveAnimeButton = ({ animeId }) => {
             <Tooltip>
                 <TooltipTrigger>
                     <div>
-                        {user && <Button className={cn("z-30 px-1 sm:px-2 bg-transparent hover:bg-transparent hover:text-red-500", errorRemoving && "bg-red-500",)} onClick={removeAnime}>
+                        {user && <Button className={cn("z-30 px-0 bg-transparent hover:bg-transparent hover:text-red-500", errorRemoving && "bg-red-500",)} onClick={removeAnime}>
                             {removeLoading ? <Loader2 className="w-4 animate-spin" /> : <CircleX className="max-w-6" />}
                         </Button>}</div>
                 </TooltipTrigger>
