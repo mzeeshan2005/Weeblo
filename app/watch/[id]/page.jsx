@@ -26,6 +26,8 @@ import {
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import Link from "next/link";
 import { Separator } from "@/components/ui/separator";
+import { useAppContext } from "@/context/page";
+import GenerateRoom from "@/components/GenerateRoom";
 
 const VideoPlayer = dynamic(() => import("@/components/VideoPlayer"), {
   loading: () => (
@@ -63,9 +65,6 @@ const DisqusComments = dynamic(() => import("@/components/DisqusComments"), {
 const ScrollTopButton = React.lazy(() =>
   import("@/components/ScrollTopButton")
 );
-
-import { useAppContext } from "@/context/page";
-import GenerateRoom from "@/components/GenerateRoom";
 
 const bebas_nueue = Bebas_Neue({
   weight: ["400"],
@@ -112,6 +111,50 @@ export default function WatchPage({ params: { id } }) {
   const [totalTime, setTotalTime] = useState(null);
   const [continueWatchTime, setContinueWatchTime] = useState(null);
   const [shared, setShared] = useState(null);
+
+  // Set page metadata dynamically
+  useEffect(() => {
+    if (animeInfo?.anime?.info?.name && currentEp) {
+      const title = `Watch ${animeInfo.anime.info.name} Episode ${currentEp.number} - ${currentEp.title} | Weeblo`;
+      document.title = title;
+
+      const metaDescription = document.querySelector('meta[name="description"]');
+      if (metaDescription) {
+        metaDescription.setAttribute(
+          "content",
+          `Watch ${animeInfo.anime.info.name} Episode ${currentEp.number} "${currentEp.title}" online in HD quality. Stream with English subtitles and dubs. Previous and next episodes available.`
+        );
+      }
+
+      // Update OG tags
+      let ogTitle = document.querySelector('meta[property="og:title"]');
+      if (!ogTitle) {
+        ogTitle = document.createElement('meta');
+        ogTitle.setAttribute('property', 'og:title');
+        document.head.appendChild(ogTitle);
+      }
+      ogTitle.setAttribute('content', title);
+
+      let ogDescription = document.querySelector('meta[property="og:description"]');
+      if (!ogDescription) {
+        ogDescription = document.createElement('meta');
+        ogDescription.setAttribute('property', 'og:description');
+        document.head.appendChild(ogDescription);
+      }
+      ogDescription.setAttribute(
+        'content',
+        `Stream ${animeInfo.anime.info.name} Episode ${currentEp.number} online free in HD quality`
+      );
+
+      let ogImage = document.querySelector('meta[property="og:image"]');
+      if (!ogImage) {
+        ogImage = document.createElement('meta');
+        ogImage.setAttribute('property', 'og:image');
+        document.head.appendChild(ogImage);
+      }
+      ogImage.setAttribute('content', animeInfo.anime.info.poster);
+    }
+  }, [animeInfo, currentEp]);
 
   // Initialize client-side and preferences
   useEffect(() => {
@@ -165,7 +208,7 @@ export default function WatchPage({ params: { id } }) {
 
     const episode = episodesResults.episodes[validIndex];
     setCurrentEp(episode);
-    setEpisodeServerLink(null); // Clear old link
+    setEpisodeServerLink(null);
   }, [episodesResults?.episodes, searchParams]);
 
   // Fetch servers and info for current episode
@@ -192,31 +235,45 @@ export default function WatchPage({ params: { id } }) {
     );
   }, [episodeServers]);
 
-  // Fetch episode link
+  // Fetch episode link with retry
   useEffect(() => {
-    if (!currentEp?.episodeId || !currentServerType || !isClient) {
-      return;
-    }
+    if (!currentEp?.episodeId || !currentServerType || !isClient) return;
 
-    const fetchLink = async () => {
+    let isCancelled = false;
+
+    const fetchLink = async (retry = 0) => {
       try {
         setServerLoading(true);
         setEpisodeServerLink(null);
+
         const link = await getAnimeEpisodeServerLink(
           currentEp.episodeId,
           "hd-2",
           currentServerType
         );
-        setEpisodeServerLink(link);
+
+        if (!isCancelled) {
+          if (link?.sources?.length) {
+            setEpisodeServerLink(link);
+          } else if (retry < 2) {
+            setTimeout(() => fetchLink(retry + 1), 500);
+          }
+        }
       } catch (error) {
         console.error("Error fetching episode link:", error);
-        setEpisodeServerLink(null);
+        if (!isCancelled && retry < 2) {
+          setTimeout(() => fetchLink(retry + 1), 500);
+        }
       } finally {
-        setServerLoading(false);
+        if (!isCancelled) setServerLoading(false);
       }
     };
 
     fetchLink();
+
+    return () => {
+      isCancelled = true;
+    };
   }, [currentEp?.episodeId, currentServerType, isClient]);
 
   // Fetch extra anime info
@@ -239,7 +296,11 @@ export default function WatchPage({ params: { id } }) {
     };
 
     fetchExtra();
-  }, [animeInfo?.anime?.info?.name, animeInfo?.anime?.moreInfo?.japanese, isClient]);
+  }, [
+    animeInfo?.anime?.info?.name,
+    animeInfo?.anime?.moreInfo?.japanese,
+    isClient,
+  ]);
 
   // Fetch episode details
   useEffect(() => {
@@ -287,13 +348,12 @@ export default function WatchPage({ params: { id } }) {
     };
 
     fetchDetails();
-  }, [animeExtraInfo?.episodes, currentEp?.number, isClient, animeInfo?.anime?.info?.stats?.type]);
-
-  // Update page title
-  useEffect(() => {
-    if (!animeInfo?.anime?.info?.name || !isClient) return;
-    window.document.title = "Weeblo - Watch " + animeInfo.anime.info.name;
-  }, [animeInfo?.anime?.info?.name, isClient]);
+  }, [
+    animeExtraInfo?.episodes,
+    currentEp?.number,
+    isClient,
+    animeInfo?.anime?.info?.stats?.type,
+  ]);
 
   // Handle checkbox changes
   const handleCheckboxChange = useCallback((key, value) => {
@@ -329,7 +389,12 @@ export default function WatchPage({ params: { id } }) {
 
   // Continue watching
   useEffect(() => {
-    if (!user?.email || !playedTime || !totalTime || Math.floor(playedTime % 2) !== 0)
+    if (
+      !user?.email ||
+      !playedTime ||
+      !totalTime ||
+      Math.floor(playedTime % 2) !== 0
+    )
       return;
 
     const saveContinueWatching = async () => {
@@ -357,7 +422,10 @@ export default function WatchPage({ params: { id } }) {
             (a) => a.animeId === data.animeId
           );
 
-          const updatedUser = { ...user, continueWatching: [...user.continueWatching] };
+          const updatedUser = {
+            ...user,
+            continueWatching: [...user.continueWatching],
+          };
           if (index !== -1) {
             updatedUser.continueWatching.splice(index, 1);
           }
@@ -370,7 +438,17 @@ export default function WatchPage({ params: { id } }) {
     };
 
     saveContinueWatching();
-  }, [playedTime, totalTime, user?.email, currentEp?.number, animeId, animeInfo?.anime?.info?.name, animeInfo?.anime?.info?.poster, user, setUser]);
+  }, [
+    playedTime,
+    totalTime,
+    user?.email,
+    currentEp?.number,
+    animeId,
+    animeInfo?.anime?.info?.name,
+    animeInfo?.anime?.info?.poster,
+    user,
+    setUser,
+  ]);
 
   // Set continue watch time
   useEffect(() => {
@@ -391,6 +469,27 @@ export default function WatchPage({ params: { id } }) {
     });
   }, []);
 
+  // Structured data for video
+  const videoStructuredData = animeInfo && currentEp ? {
+    "@context": "https://schema.org",
+    "@type": "TVEpisode",
+    name: `${animeInfo.anime.info.name} - Episode ${currentEp.number}: ${currentEp.title}`,
+    episodeNumber: currentEp.number,
+    description: epInfo?.description || `Watch ${animeInfo.anime.info.name} Episode ${currentEp.number}`,
+    image: animeInfo.anime.info.poster,
+    partOfSeries: {
+      "@type": "TVSeries",
+      name: animeInfo.anime.info.name,
+    },
+    potentialAction: {
+      "@type": "WatchAction",
+      target: {
+        "@type": "EntryPoint",
+        urlTemplate: typeof window !== 'undefined' ? window.location.href : '',
+      },
+    },
+  } : null;
+
   // Loading state
   if (!isClient || fetchLoading) {
     return (
@@ -409,206 +508,268 @@ export default function WatchPage({ params: { id } }) {
   }
 
   return (
-    <div className="lg:pl-1 flex-grow-0 flex flex-col mt-10 sm:mt-16">
-      <div className="relative flex flex-col">
-        <div className="flex gap-2 flex-col lg:flex-row">
-          <div className="flex-grow mb-2 lg:mb-0 max-h-[90vh] bg-black lg:min-w-[75vw] px-2 py-4 sm:p-0 aspect-video lg:aspect-auto flex-1">
-            {serverLoading && (
-              <Loader className="mx-auto relative top-1/2 h-8 w-8 animate-spin text-primary" />
-            )}
-            {!serverLoading && episodeServerLink?.sources?.[0]?.url && (
-              <VideoPlayer
-                Url={episodeServerLink.sources[0].url}
-                tracks={episodeServerLink.tracks}
-                type={episodeServerLink.sources[0].type}
-                outro={episodeServerLink.outro}
-                intro={episodeServerLink.intro}
-                setEpEnded={setEpEnded}
-                userPreferences={userPreferences}
-                setUserPreferences={setUserPreferences}
-                setPlayedTime={setPlayedTime}
-                setTotalTime={setTotalTime}
-                continueWatchTime={continueWatchTime}
-              />
-            )}
-          </div>
-          <EpisodesList
-            animeId={animeId}
-            episodes={episodesResults?.episodes}
-            currentEp={currentEp}
-          />
-        </div>
-
-        <div className="grid lg:grid-cols-4">
-          <div className="px-4 col-span-1 lg:col-span-3 py-2">
-            <div className="w-fit ml-auto mb-2 lg:mb-0 flex space-x-3 text-xs items-center">
-              <Button
-                variant="none"
-                className="flex items-center space-x-1 p-0"
-                onClick={prevEp}
-                id="prev">
-                <StepBack className="w-4" />
-                <label htmlFor="prev" className="cursor-pointer font-medium leading-none">
-                  Prev
-                </label>
-              </Button>
-              <Button
-                variant="none"
-                className="flex items-center space-x-1 p-0"
-                onClick={nextEp}
-                id="next">
-                <label htmlFor="next" className="cursor-pointer font-medium leading-none">
-                  Next
-                </label>
-                <StepForward className="w-4" />
-              </Button>
-              <div className="flex items-center space-x-2">
-                <Checkbox
-                  checked={userPreferences?.AutoPlay || false}
-                  onCheckedChange={(checked) => handleCheckboxChange("AutoPlay", checked)}
-                  id="autoPlay"
+    <>
+      <main 
+        className="lg:pl-1 flex-grow-0 flex flex-col mt-10 sm:mt-16"
+        itemScope
+        itemType="https://schema.org/VideoObject"
+      >
+        <article className="relative flex flex-col">
+          {/* Video Player Section */}
+          <section 
+            className="flex gap-2 flex-col lg:flex-row"
+            aria-label="Video player and episodes"
+          >
+            <div 
+              className="flex-grow mb-2 lg:mb-0 max-h-[90vh] bg-black lg:min-w-[75vw] px-2 py-4 sm:p-0 aspect-video lg:aspect-auto flex-1"
+              itemProp="video"
+              itemScope
+              itemType="https://schema.org/VideoObject"
+            >
+              {serverLoading && (
+                <Loader className="mx-auto relative top-1/2 h-8 w-8 animate-spin text-primary" />
+              )}
+              {!serverLoading && episodeServerLink?.sources?.[0]?.url && (
+                <VideoPlayer
+                  Url={episodeServerLink.sources[0].url}
+                  tracks={episodeServerLink.tracks}
+                  type={episodeServerLink.sources[0].type}
+                  outro={episodeServerLink.outro}
+                  intro={episodeServerLink.intro}
+                  setEpEnded={setEpEnded}
+                  userPreferences={userPreferences}
+                  setUserPreferences={setUserPreferences}
+                  setPlayedTime={setPlayedTime}
+                  setTotalTime={setTotalTime}
+                  continueWatchTime={continueWatchTime}
                 />
-                <label htmlFor="autoPlay" className="font-medium leading-none">
-                  Auto Play
-                </label>
-              </div>
-              <div className="flex items-center space-x-2">
-                <Checkbox
-                  checked={userPreferences?.AutoNext !== false}
-                  onCheckedChange={(checked) => handleCheckboxChange("AutoNext", checked)}
-                  id="autoNext"
-                />
-                <label htmlFor="autoNext" className="font-medium leading-none">
-                  Auto Next
-                </label>
-              </div>
+              )}
             </div>
 
-            <h1 className={cn("text-2xl md:text-3xl font-bold", bebas_nueue.className)}>
-              {animeInfo?.anime?.info?.stats?.type !== "TV"
-                ? animeInfo?.anime?.info?.name + " - " + currentEp?.title
-                : currentEp?.number + " - " + currentEp?.title}
-            </h1>
+            <aside aria-label="Episodes list">
+              <EpisodesList
+                animeId={animeId}
+                episodes={episodesResults?.episodes}
+                currentEp={currentEp}
+              />
+            </aside>
+          </section>
 
-            <div className="flex justify-between items-center space-x-4 my-4">
-              <div className="flex items-center">
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button variant="ghost" onClick={handleCopyUrl}>
-                        <Share2
-                          className={cn(
-                            "hover:text-primary",
-                            shared && "text-secondary"
-                          )}
-                        />
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <p>{shared ? "URL copied!" : "Share"}</p>
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
-                {user && animeInfo && currentEp && (
+          <div className="grid lg:grid-cols-4">
+            <div className="px-4 col-span-1 lg:col-span-3 py-2">
+              {/* Episode Controls */}
+              <nav 
+                className="w-fit ml-auto mb-2 lg:mb-0 flex space-x-3 text-xs items-center"
+                aria-label="Episode navigation"
+              >
+                <Button
+                  variant="none"
+                  className="flex items-center space-x-1 p-0"
+                  onClick={prevEp}
+                  aria-label="Previous episode"
+                  disabled={currentEp?.number === 1}
+                >
+                  <StepBack className="w-4" />
+                  <span>Prev</span>
+                </Button>
+                <Button
+                  variant="none"
+                  className="flex items-center space-x-1 p-0"
+                  onClick={nextEp}
+                  aria-label="Next episode"
+                  disabled={currentEp?.number === episodesResults?.episodes.length}
+                >
+                  <span>Next</span>
+                  <StepForward className="w-4" />
+                </Button>
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    checked={userPreferences?.AutoPlay || false}
+                    onCheckedChange={(checked) =>
+                      handleCheckboxChange("AutoPlay", checked)
+                    }
+                    id="autoPlay"
+                  />
+                  <label htmlFor="autoPlay" className="font-medium leading-none">
+                    Auto Play
+                  </label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    checked={userPreferences?.AutoNext !== false}
+                    onCheckedChange={(checked) =>
+                      handleCheckboxChange("AutoNext", checked)
+                    }
+                    id="autoNext"
+                  />
+                  <label htmlFor="autoNext" className="font-medium leading-none">
+                    Auto Next
+                  </label>
+                </div>
+              </nav>
+
+              {/* Episode Title */}
+              <h1
+                className={cn(
+                  "text-2xl md:text-3xl font-bold",
+                  bebas_nueue.className
+                )}
+                itemProp="name"
+              >
+                {animeInfo?.anime?.info?.stats?.type !== "TV"
+                  ? `${animeInfo?.anime?.info?.name} - ${currentEp?.title}`
+                  : `Episode ${currentEp?.number} - ${currentEp?.title}`}
+              </h1>
+
+              {/* Share and Server Options */}
+              <div className="flex justify-between items-center space-x-4 my-4">
+                <div className="flex items-center">
                   <TooltipProvider>
                     <Tooltip>
                       <TooltipTrigger asChild>
-                        <GenerateRoom
-                          name={animeInfo.anime.info.name}
-                          epNo={currentEp.number}
-                          epId={currentEp.episodeId}
-                          category={currentServerType}
-                          poster={animeInfo.anime.info.poster}
-                          host={user._id}
-                        />
+                        <Button variant="ghost" onClick={handleCopyUrl} aria-label="Share episode">
+                          <Share2
+                            className={cn(
+                              "hover:text-primary",
+                              shared && "text-secondary"
+                            )}
+                          />
+                        </Button>
                       </TooltipTrigger>
                       <TooltipContent>
-                        <p>Cinema Room</p>
+                        <p>{shared ? "URL copied!" : "Share"}</p>
                       </TooltipContent>
                     </Tooltip>
                   </TooltipProvider>
-                )}
-              </div>
-              <div className="flex items-center space-x-2">
-                <ToggleGroup
-                  type="single"
-                  value={currentServerType}
-                  onValueChange={(e) => e && setCurrentServerType(e)}>
-                  {episodeServers?.raw?.length > 0 && (
-                    <ToggleGroupItem value="raw" className="text-xs rounded-sm">
-                      Raw
-                    </ToggleGroupItem>
+                  {user && animeInfo && currentEp && (
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <GenerateRoom
+                            name={animeInfo.anime.info.name}
+                            epNo={currentEp.number}
+                            epId={currentEp.episodeId}
+                            category={currentServerType}
+                            poster={animeInfo.anime.info.poster}
+                            host={user._id}
+                          />
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>Cinema Room</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
                   )}
-                  <ToggleGroupItem value="sub" className="text-xs rounded-sm">
-                    Original
-                  </ToggleGroupItem>
-                  {episodeServers?.dub?.length > 0 && (
-                    <ToggleGroupItem value="dub" className="text-xs rounded-sm">
-                      Dubbed
+                </div>
+
+                {/* Server Type Toggle */}
+                <div className="flex items-center space-x-2" role="group" aria-label="Audio language selection">
+                  <ToggleGroup
+                    type="single"
+                    value={currentServerType}
+                    onValueChange={(e) => e && setCurrentServerType(e)}
+                  >
+                    {episodeServers?.raw?.length > 0 && (
+                      <ToggleGroupItem value="raw" className="text-xs rounded-sm">
+                        Raw
+                      </ToggleGroupItem>
+                    )}
+                    <ToggleGroupItem value="sub" className="text-xs rounded-sm">
+                      Original
                     </ToggleGroupItem>
-                  )}
-                </ToggleGroup>
+                    {episodeServers?.dub?.length > 0 && (
+                      <ToggleGroupItem value="dub" className="text-xs rounded-sm">
+                        Dubbed
+                      </ToggleGroupItem>
+                    )}
+                  </ToggleGroup>
+                </div>
               </div>
+
+              {/* Anime Link */}
+              <div className="my-4">
+                <Link
+                  className="flex items-center space-x-2 my-2 hover:underline"
+                  href={`/animeInfo/${encodeURIComponent(id)}`}
+                  itemProp="partOfSeries"
+                >
+                  <Avatar>
+                    <AvatarImage
+                      alt={`${animeInfo?.anime?.info?.name} poster`}
+                      src={animeInfo?.anime?.info?.poster}
+                    />
+                  </Avatar>
+                  <span className="text-sm font-semibold">
+                    {animeInfo?.anime?.info?.name}
+                  </span>
+                </Link>
+              </div>
+
+              {/* Episode Details */}
+              <section aria-labelledby="episode-details" itemProp="description">
+                <h2 id="episode-details" className="sr-only">Episode Details</h2>
+                <div className="mt-4 space-y-2">
+                  {fetchLoading2 ? (
+                    <Loader className="mx-auto h-6 w-6 animate-spin text-secondary" />
+                  ) : (
+                    <EpDetail
+                      epInfo={epInfo}
+                      animeInfo={animeInfo}
+                      animeExtraInfo={animeExtraInfo}
+                      title={
+                        animeInfo?.anime?.info?.stats?.type !== "TV"
+                          ? animeInfo?.anime?.info?.name
+                          : currentEp?.title
+                      }
+                    />
+                  )}
+                </div>
+              </section>
+
+              <Separator className="my-2" />
+
+              {/* Comments Section */}
+              <section aria-labelledby="comments-section">
+                <h2 id="comments-section" className="sr-only">Episode Comments</h2>
+                <div className="rounded-lg mt-5 overflow-hidden z-0">
+                  {currentEp && (
+                    <DisqusComments
+                      episode={{
+                        title: currentEp.title,
+                        animeId: animeId,
+                        epNumber: currentEp.number,
+                      }}
+                    />
+                  )}
+                </div>
+              </section>
             </div>
 
-            <div className="my-4">
-              <Link
-                className="flex items-center space-x-2 my-2"
-                href={`/animeInfo/${encodeURIComponent(id)}`}>
-                <Avatar>
-                  <AvatarImage
-                    alt={animeInfo?.anime?.info?.name?.[0]}
-                    src={animeInfo?.anime?.info?.poster}
-                  />
-                </Avatar>
-                <span className="text-sm font-semibold">{animeInfo?.anime?.info?.name}</span>
-              </Link>
-            </div>
+            <Separator className="my-2 lg:hidden" />
 
-            <div className="mt-4 space-y-2">
-              {fetchLoading2 ? (
-                <Loader className="mx-auto h-6 w-6 animate-spin text-secondary" />
-              ) : (
-                <EpDetail
-                  epInfo={epInfo}
-                  animeInfo={animeInfo}
-                  animeExtraInfo={animeExtraInfo}
-                  title={
-                    animeInfo?.anime?.info?.stats?.type !== "TV"
-                      ? animeInfo?.anime?.info?.name
-                      : currentEp?.title
-                  }
-                />
-              )}
-            </div>
-
-            <Separator className="my-2" />
-
-            <div className="rounded-lg mt-5 overflow-hidden z-0">
-              {currentEp && (
-                <DisqusComments
-                  episode={{
-                    title: currentEp.title,
-                    animeId: animeId,
-                    epNumber: currentEp.number,
-                  }}
-                />
-              )}
-            </div>
+            {/* Related Anime Sidebar */}
+            <aside className="w-full lg:w-80 p-4" aria-label="Related anime">
+              <AnimeVerticalCarousel
+                animes={animeInfo?.relatedAnimes}
+                type={"Related"}
+                page="info"
+              />
+            </aside>
           </div>
+        </article>
 
-          <Separator className="my-2 lg:hidden" />
+        <ScrollTopButton />
+      </main>
 
-          <div className="w-full lg:w-80 p-4">
-            <AnimeVerticalCarousel
-              animes={animeInfo?.relatedAnimes}
-              type={"Related"}
-              page="info"
-            />
-          </div>
-        </div>
-      </div>
-      <ScrollTopButton />
-    </div>
+      {/* Structured Data */}
+      {videoStructuredData && (
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify(videoStructuredData),
+          }}
+        />
+      )}
+    </>
   );
 }

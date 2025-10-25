@@ -17,6 +17,11 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { Separator } from "@/components/ui/separator";
+import { Button } from "@/components/ui/button";
+import { ChevronDown, FilterX, Loader } from "lucide-react";
+import { Bakbak_One } from "next/font/google";
+
 const AnimeGrid = dynamic(() => import("@/components/AnimeGrid"), {
   loading: () => (
     <Loader className="mx-auto relative bottom-0 w-6 animate-spin text-primary" />
@@ -35,15 +40,13 @@ const Pagination = dynamic(() => import("@/components/SearchPagination"), {
     <Loader className="mx-auto relative bottom-0 w-6 animate-spin text-primary" />
   ),
 });
-import { Separator } from "@/components/ui/separator";
-import { Button } from "@/components/ui/button";
-import { ChevronDown, FilterX, Loader } from "lucide-react";
-import { Bakbak_One } from "next/font/google";
+
 const bakbak_one = Bakbak_One({
   weight: ["400"],
   style: "normal",
   subsets: ["latin"],
 });
+
 const SearchPage = ({ params: { term }, searchParams: { type } }) => {
   const [fetchLoading, setfetchLoading] = useState(null);
   const [fetchLoading2, setfetchLoading2] = useState(null);
@@ -56,186 +59,202 @@ const SearchPage = ({ params: { term }, searchParams: { type } }) => {
 
   if (!term) notFound();
   const termToUse = decodeURI(term);
+
+  useEffect(() => {
+    const typeLabel =
+      {
+        genre: "Genre",
+        search: "Search",
+        producer: "Producer",
+        category: "Category",
+        az: "A-Z",
+      }[type] || "Search";
+
+    const title = `${termToUse} ${typeLabel} Anime Results | Watch ${termToUse} Online - Weeblo`;
+    const description = `Explore ${termToUse} anime ${typeLabel.toLowerCase()} results. Stream HD episodes with English subs & dubs. Filter by type, duration, or popularity — all on Weeblo.`;
+    const keywords = `${termToUse} anime, watch ${termToUse}, anime ${typeLabel.toLowerCase()}, ${termToUse} streaming, anime ${typeLabel} list`;
+
+    document.title = title;
+
+    const metaDescription =
+      document.querySelector('meta[name="description"]') ||
+      Object.assign(document.createElement("meta"), { name: "description" });
+    metaDescription.content = description;
+    document.head.appendChild(metaDescription);
+
+    const metaKeywords =
+      document.querySelector('meta[name="keywords"]') ||
+      Object.assign(document.createElement("meta"), { name: "keywords" });
+    metaKeywords.content = keywords;
+    document.head.appendChild(metaKeywords);
+
+    const canonical =
+      document.querySelector('link[rel="canonical"]') ||
+      Object.assign(document.createElement("link"), { rel: "canonical" });
+    canonical.href = `https://weeblo.vercel.app/search/${termToUse}?type=${type}`;
+    document.head.appendChild(canonical);
+  }, [termToUse, type]);
+
+  //  Fetch anime data
   const fetchSearchResults = async () => {
     setfetchLoading(true);
-    if (type == "genre") {
-      await getGenreResults(termToUse.toLowerCase(), currentPage).then((res) =>
-        setSearchResults(res)
-      );
-    } else if (type == "search") {
-      await getSearchResults(termToUse.toLowerCase(), currentPage).then((res) =>
-        setSearchResults(res)
-      );
-    } else if (type == "producer") {
-      await getProducerResults(
-        termToUse.replace(" ", "-").toLowerCase(),
-        currentPage
-      ).then((res) => setSearchResults(res));
-    } else if (type == "az") {
-      await getAnimeAZ(
-        termToUse,
-        currentPage
-      ).then((res) => setSearchResults(res));
-    } else {
-      await getCategoryResults(termToUse.toLowerCase(), currentPage).then(
-        (res) => setSearchResults(res)
-      );
+    try {
+      let results;
+      if (type === "genre")
+        results = await getGenreResults(termToUse.toLowerCase(), currentPage);
+      else if (type === "search")
+        results = await getSearchResults(termToUse.toLowerCase(), currentPage);
+      else if (type === "producer")
+        results = await getProducerResults(
+          termToUse.replace(" ", "-").toLowerCase(),
+          currentPage
+        );
+      else if (type === "az") results = await getAnimeAZ(termToUse, currentPage);
+      else
+        results = await getCategoryResults(termToUse.toLowerCase(), currentPage);
+      setSearchResults(results);
+    } catch (e) {
+      console.error("Error fetching results", e);
+    } finally {
+      setfetchLoading(false);
     }
-    setfetchLoading(false);
   };
+
   const fetchSearchSuggestions = async () => {
     setfetchLoading2(true);
-    await getSearchSuggestions(termToUse.toLowerCase()).then((res) =>
-      setSearchSuggestions(res)
-    );
-    setfetchLoading2(false);
+    try {
+      const suggestions = await getSearchSuggestions(termToUse.toLowerCase());
+      setSearchSuggestions(suggestions);
+    } catch (e) {
+      console.error("Error fetching suggestions", e);
+    } finally {
+      setfetchLoading2(false);
+    }
   };
+
   const handlePagination = (pageNumber) => {
     setCurrentPage(pageNumber);
     fetchSearchResults();
   };
+
   useEffect(() => {
     fetchSearchResults();
     fetchSearchSuggestions();
   }, []);
+
+  //  Filter logic
   useEffect(() => {
     if (!typeFilter && !durationFilter) return;
-    let filteredAnimeList = searchResults.animes;
+    let filtered = searchResults.animes;
 
-    if (typeFilter) {
-      filteredAnimeList = filteredAnimeList.filter(
-        (anime) => anime.type === typeFilter
-      );
-    }
+    if (typeFilter) filtered = filtered.filter((a) => a.type === typeFilter);
 
     if (durationFilter) {
-      let durationTimeStart, durationTimeEnd;
-      if (durationFilter !== "40+") {
-        let filters = durationFilter.split("-");
-        durationTimeStart = Number(filters[0]);
-        durationTimeEnd = Number(filters[1]);
-      } else {
-        durationTimeStart = 40;
-        durationTimeEnd = 200;
-      }
-
-      filteredAnimeList = filteredAnimeList.filter((anime) => {
-        let duration = Number(anime.duration.split("m")[0]);
-        return duration >= durationTimeStart && duration <= durationTimeEnd;
+      const [min, max] =
+        durationFilter !== "40+"
+          ? durationFilter.split("-").map(Number)
+          : [40, 200];
+      filtered = filtered.filter((a) => {
+        const duration = Number(a.duration.split("m")[0]);
+        return duration >= min && duration <= max;
       });
     }
-
-    setFilterdResults(filteredAnimeList);
+    setFilterdResults(filtered);
   }, [typeFilter, durationFilter]);
+
+  //  JSON-LD structured data for SEO
+  const structuredData = {
+    "@context": "https://schema.org",
+    "@type": "ItemList",
+    name: `${termToUse} Anime Results`,
+    itemListElement:
+      searchResults.animes?.map((anime, i) => ({
+        "@type": "ListItem",
+        position: i + 1,
+        item: {
+          "@type": "TVSeries",
+          name: anime.name,
+          url: `https://weeblo.vercel.app/anime/${anime.id}`,
+          image: anime.poster,
+        },
+      })) || [],
+  };
+
   return (
-    <div className="px-2 min-h-screen md:space-x-2 grid grid-cols-1 mt-16 lg:grid-cols-4 items-start">
-      <div className={cn("col-span-1 h-full lg:col-span-3 py-2")}>
-        <div className="flex items-center space-x-4">
-          <p
-            className={cn(
-              "text-secondary ml-2 font-bold text-lg sm:text-xl lg:text-2xl select-none",
-              bakbak_one.className
-            )}>
-            Results for{" "}
-          </p>
-          <p className="text-lg font-semibold">"{termToUse}"</p>
-        </div>
-        <div className="w-fit flex px-2 ml-auto mb-1">
-          <DropdownMenu>
-            <DropdownMenuTrigger className="focus:outline-none ">
-              <div className="flex items-center text-xs sm:text-sm mr-5 text-secondary dark:text-white font-semibold">
-                {typeFilter ? typeFilter : "Type"}
-                <ChevronDown />
-              </div>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent
-              align="end"
-              className=" backdrop-blur-xl w-fit p-0 mr-5">
-              <DropdownMenuItem
-                className="cursor-pointer text-white ml-auto"
-                onClick={() => setTypeFilter("TV")}>
-                <Button variant="ghost" className="w-full text-xs sm:text-sm">
-                  TV
-                </Button>
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                className="cursor-pointer ml-auto text-white "
-                onClick={() => setTypeFilter("Movie")}>
-                <Button variant="ghost" className="w-full text-xs sm:text-sm">
-                  Movie
-                </Button>
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                className="cursor-pointer ml-auto text-white "
-                onClick={() => setTypeFilter("Special")}>
-                <Button variant="ghost" className="w-full text-xs sm:text-sm">
-                  Special
-                </Button>
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                className="cursor-pointer ml-auto text-white "
-                onClick={() => setTypeFilter("OVA")}>
-                <Button variant="ghost" className="w-full text-xs sm:text-sm">
-                  OVA
-                </Button>
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                className="cursor-pointer ml-auto text-white "
-                onClick={() => setTypeFilter("ONA")}>
-                <Button variant="ghost" className="w-full text-xs sm:text-sm">
-                  ONA
-                </Button>
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-          <DropdownMenu>
-            <DropdownMenuTrigger className="focus:outline-none ">
-              <div className="flex items-center text-xs sm:text-sm mr-5 text-secondary dark:text-white font-semibold">
-                {durationFilter ? durationFilter + " min" : "Duration"}
-                <ChevronDown />
-              </div>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent
-              align="end"
-              className="backdrop-blur-xl w-fit p-0 mr-5">
-              <DropdownMenuItem
-                className="cursor-pointer text-white ml-auto"
-                onClick={() => setDurationFilter("0-10")}>
-                <Button variant="ghost" className="w-full text-xs sm:text-sm">
-                  0-10 min
-                </Button>
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                className="cursor-pointer ml-auto text-white "
-                onClick={() => setDurationFilter("10-20")}>
-                <Button variant="ghost" className="w-full text-xs sm:text-sm">
-                  10-20 min
-                </Button>
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                className="cursor-pointer ml-auto text-white "
-                onClick={() => setDurationFilter("20-30")}>
-                <Button variant="ghost" className="w-full text-xs sm:text-sm">
-                  20-30 min
-                </Button>
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                className="cursor-pointer ml-auto text-white "
-                onClick={() => setDurationFilter("30-40")}>
-                <Button variant="ghost" className="w-full text-xs sm:text-sm">
-                  30-40 min
-                </Button>
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                className="cursor-pointer ml-auto text-white "
-                onClick={() => setDurationFilter("40+")}>
-                <Button variant="ghost" className="w-full text-xs sm:text-sm">
-                  40+ min
-                </Button>
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-          {
+    <>
+      <main
+        className="px-2 min-h-screen grid grid-cols-1 md:space-x-2 mt-16 lg:grid-cols-4 items-start"
+        itemScope
+        itemType="https://schema.org/SearchResultsPage"
+      >
+        {/* ---------- MAIN RESULTS ---------- */}
+        <div className="col-span-1 lg:col-span-3 py-2">
+          <header className="flex items-center space-x-4 mb-3">
+            <h1
+              className={cn(
+                "text-secondary ml-2 font-bold text-lg sm:text-xl lg:text-2xl",
+                bakbak_one.className
+              )}
+              itemProp="name"
+            >
+              Results for
+            </h1>
+            <span className="text-lg font-semibold" itemProp="query">
+              “{termToUse}”
+            </span>
+          </header>
+
+          {/* Filters */}
+          <section
+            className="w-fit flex px-2 ml-auto mb-1"
+            role="group"
+            aria-label="Search filters"
+          >
+            {/* Type Filter */}
+            <DropdownMenu>
+              <DropdownMenuTrigger className="focus:outline-none">
+                <div className="flex items-center text-xs sm:text-sm mr-5 text-secondary dark:text-white font-semibold">
+                  {typeFilter || "Type"} <ChevronDown />
+                </div>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="backdrop-blur-xl w-fit p-0 mr-5">
+                {["TV", "Movie", "Special", "OVA", "ONA"].map((type) => (
+                  <DropdownMenuItem
+                    key={type}
+                    onClick={() => setTypeFilter(type)}
+                    className="cursor-pointer text-white"
+                  >
+                    <Button variant="ghost" className="w-full text-xs sm:text-sm">
+                      {type}
+                    </Button>
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+
+            {/* Duration Filter */}
+            <DropdownMenu>
+              <DropdownMenuTrigger className="focus:outline-none">
+                <div className="flex items-center text-xs sm:text-sm mr-5 text-secondary dark:text-white font-semibold">
+                  {durationFilter ? `${durationFilter} min` : "Duration"}{" "}
+                  <ChevronDown />
+                </div>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="backdrop-blur-xl w-fit p-0 mr-5">
+                {["0-10", "10-20", "20-30", "30-40", "40+"].map((dur) => (
+                  <DropdownMenuItem
+                    key={dur}
+                    onClick={() => setDurationFilter(dur)}
+                    className="cursor-pointer text-white"
+                  >
+                    <Button variant="ghost" className="w-full text-xs sm:text-sm">
+                      {dur} min
+                    </Button>
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+
             <Button
               variant="outline"
               onClick={() => {
@@ -244,65 +263,82 @@ const SearchPage = ({ params: { term }, searchParams: { type } }) => {
                 setTypeFilter(null);
               }}
               className={cn(
-                "w-fit border-none bg-inherit ",
+                "w-fit border-none bg-inherit",
                 filterdResults && "bg-primary/90 hover:bg-primary"
-              )}>
+              )}
+            >
               <FilterX className="w-5" />
             </Button>
-          }
-        </div>
-        <div
-          className={cn(
-            "min-h-[80%] sm:max-h-[110vh] border lg:border-r p-1 mb-1 overflow-y-scroll no-scrollbar",
-            (type == "genre" || type == "category") && "md:h-screen"
-          )}>
-          <AnimeGrid
-            animes={filterdResults ? filterdResults : searchResults?.animes}
-            type={""}
-          />
-        </div>
-        {searchResults && !filterdResults && (
-          <Pagination
-            currentPage={currentPage}
-            totalPages={searchResults.totalPages}
-            hasNextPage={searchResults.hasNextPage}
-            fetchLoading={fetchLoading}
-            handlePagination={handlePagination}
-          />
-        )}
-      </div>
-      <div className="flex flex-col md:space-y-20 mt-10 sm:mt-20 lg:mt-10">
-        <div className="border">
-          {!fetchLoading && (type == "genre" || type == "producer") && (
-            <AnimeVerticalCarousel
-              animes={searchResults?.topAiringAnimes}
-              type={"Top Airing"}
+          </section>
+
+          {/* Results Grid */}
+          <section
+            className="min-h-[80%] sm:max-h-[110vh] mb-1 border lg:border-r p-1 overflow-y-scroll no-scrollbar"
+            itemProp="mainEntity"
+          >
+            <AnimeGrid
+              animes={filterdResults || searchResults?.animes}
+              type=""
             />
-          )}
-          {!fetchLoading && type == "search" && (
-            <AnimeVerticalCarousel
-              animes={searchResults?.mostPopularAnimes}
-              type={"Popular"}
+          </section>
+
+          {/* Pagination */}
+          {searchResults && !filterdResults && (
+            <Pagination
+              currentPage={currentPage}
+              totalPages={searchResults.totalPages}
+              hasNextPage={searchResults.hasNextPage}
+              fetchLoading={fetchLoading}
+              handlePagination={handlePagination}
             />
           )}
         </div>
-        <Separator />
-        <div className="border">
-          {!fetchLoading2 && type == "search" && (
-            <AnimeVerticalCarousel
-              animes={searchSuggestions?.suggestions}
-              type={"Suggestions"}
-            />
-          )}
-          {!fetchLoading && (type == "producer" || type == "category") && (
-            <AnimeVerticalCarousel
-              animes={searchResults?.top10Animes?.week}
-              type={"Top 10"}
-            />
-          )}
-        </div>
-      </div>
-    </div>
+
+        {/* ---------- SIDEBAR ---------- */}
+        <aside className="mt-10 sm:mt-20 lg:mt-10">
+          <section >
+            {!fetchLoading && (type === "genre" || type === "producer") && (
+              <AnimeVerticalCarousel
+                animes={searchResults?.topAiringAnimes}
+                type="Top Airing"
+              />
+            )}
+            {!fetchLoading && type === "search" && (
+              <AnimeVerticalCarousel
+                animes={searchResults?.mostPopularAnimes}
+                type="Popular"
+              />
+            )}
+          </section>
+
+          <Separator />
+
+          <section >
+            {!fetchLoading2 && type === "search" && (
+              <AnimeVerticalCarousel
+                animes={searchSuggestions?.suggestions}
+                type="Suggestions"
+              />
+            )}
+            {!fetchLoading && (type === "producer" || type === "category") && (
+              <AnimeVerticalCarousel
+                animes={searchResults?.top10Animes?.week}
+                type="Top 10"
+              />
+            )}
+          </section>
+        </aside>
+      </main>
+
+      {searchResults?.animes?.length > 0 && (
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify(structuredData),
+          }}
+        />
+      )}
+    </>
   );
 };
 
