@@ -176,13 +176,10 @@ export default function DetailedInfoCard({ params: { id } }) {
           content={`https://yourdomain.com/info/${animeId}`}
         />
         <meta name="twitter:card" content="summary_large_image" />
-        <link
-          rel="canonical"
-          href={`https://yourdomain.com/info/${animeId}`}
-        />
+        <link rel="canonical" href={`https://yourdomain.com/info/${animeId}`} />
         <link
           rel="preload"
-          href={animeExtraInfo?.coverImage || animeInfo?.anime?.info?.poster || "/default-image.jpg"}
+          href={animeExtraInfo?.coverImage || animeInfo?.anime?.info?.poster}
           as="image"
         />
       </Head>
@@ -195,11 +192,7 @@ export default function DetailedInfoCard({ params: { id } }) {
               className="aspect-[3360/800] z-0 object-cover h-[40vh] lg:h-[45vh] w-full"
               width={3360}
               height={800}
-              src={
-                animeExtraInfo?.coverImage ||
-                animeInfo?.anime?.info?.poster ||
-                "/default-image.jpg"
-              }
+              src={animeExtraInfo?.coverImage || animeInfo?.anime?.info?.poster}
               priority={true}
             />
             <div className="absolute w-fit right-1 top-1 sm:opacity-80 sm:hover:opacity-100 z-[25]">
@@ -218,8 +211,7 @@ export default function DetailedInfoCard({ params: { id } }) {
                     <Button
                       variant="outline"
                       className="border-none bg-white dark:text-black dark:hover:text-white sm:opacity-80 sm:hover:opacity-100"
-                      aria-label="Watch anime trailer"
-                    >
+                      aria-label="Watch anime trailer">
                       <SquarePlay aria-hidden="true" />
                       Trailer
                     </Button>
@@ -235,8 +227,12 @@ export default function DetailedInfoCard({ params: { id } }) {
                 </Dialog>
               )}
               {animeInfo?.anime?.moreInfo.status !== "Not yet aired" && (
-                <Link href={`/watch/${encodeURIComponent(watchId)}?ep=1`} className="w-[35%] md:w-[20%]">
-                  <Button className="w-full text-white sm:opacity-90 sm:hover:opacity-100" aria-label={`Watch ${animeInfo?.anime?.info?.name}`}>
+                <Link
+                  href={`/watch/${encodeURIComponent(watchId)}?ep=1`}
+                  className="w-[35%] md:w-[20%]">
+                  <Button
+                    className="w-full text-white sm:opacity-90 sm:hover:opacity-100"
+                    aria-label={`Watch ${animeInfo?.anime?.info?.name}`}>
                     <Play aria-hidden="true" />
                     Watch
                   </Button>
@@ -247,8 +243,7 @@ export default function DetailedInfoCard({ params: { id } }) {
               className={cn(
                 "absolute z-20 top-2 left-2 text-4xl font-bold text-white",
                 bebas_nueue.className
-              )}
-            >
+              )}>
               {animeInfo?.anime?.info?.name}
             </h1>
           </header>
@@ -278,8 +273,7 @@ export default function DetailedInfoCard({ params: { id } }) {
                     <Video className="w-5 h-5" aria-hidden="true" />
                     <Link
                       href={`/search/${animeInfo?.anime?.info?.stats?.type}?type=category`}
-                      aria-label={`Filter by type: ${animeInfo?.anime?.info?.stats?.type}`}
-                    >
+                      aria-label={`Filter by type: ${animeInfo?.anime?.info?.stats?.type}`}>
                       <span className="hover:text-secondary">
                         {animeInfo?.anime?.info?.stats?.type}
                       </span>
@@ -319,8 +313,7 @@ export default function DetailedInfoCard({ params: { id } }) {
                       <Link
                         key={i}
                         href={`/search/${genre}?type=genre`}
-                        aria-label={`Filter by genre: ${genre}`}
-                      >
+                        aria-label={`Filter by genre: ${genre}`}>
                         <span className="cursor-pointer hover:text-secondary font-semibold">
                           {genre +
                             (i === animeInfo.anime?.moreInfo.genres.length - 1
@@ -338,14 +331,12 @@ export default function DetailedInfoCard({ params: { id } }) {
               className={cn(
                 "relative z-0 description-box p-1 sm:max-w-[85%] rounded-sm bg-gray-100 dark:bg-inherit flex border max-h-fit overflow-hidden flex-col gap-2 text-sm dark:text-gray-300",
                 seeMore && "max-h-[10rem] overflow-y-scroll"
-              )}
-            >
+              )}>
               <div
                 className={cn(
                   "absolute inset-0 bg-gradient-to-br from-gray-50/0 dark:from-primary/10 via-gray-500/0 dark:via-gray-500/10 to-gray-950/60 dark:to-gray-950 z-10",
                   seeMore && "hidden"
-                )}
-              ></div>
+                )}></div>
               <h2 className="text-lg font-semibold">Synopsis</h2>
               <p>
                 {animeInfo?.anime?.info?.description &&
@@ -359,35 +350,46 @@ export default function DetailedInfoCard({ params: { id } }) {
                   "w-fit text-secondary ml-auto mb-4 cursor-pointer font-semibold z-20"
                 )}
                 aria-expanded={seeMore}
-                aria-controls="description-box"
-              >
+                aria-controls="description-box">
                 {seeMore ? "Collapse synopsis" : "Expand synopsis"}
               </button>
             </section>
             <section className="grid grid-cols-2 gap-1 md:max-w-[85%]">
               <div className="rounded-sm flex space-y-2 flex-col items-center border py-2 px-4">
-                <h3 className="font-semibold text-lg leading-none text-secondary">Watches</h3>
+                <h3 className="font-semibold text-lg leading-none text-secondary">
+                  Watches
+                </h3>
                 <div className="flex items-center space-x-2">
                   <Users aria-hidden="true" />
                   <span>{animeExtraInfo?.userCount || "?"}</span>
                 </div>
               </div>
               <div className="rounded-sm flex space-y-2 flex-col items-center border py-2 px-4">
-                <h3 className="font-semibold text-lg leading-none text-secondary">Likes</h3>
+                <h3 className="font-semibold text-lg leading-none text-secondary">
+                  Likes
+                </h3>
                 <div className="flex items-center space-x-2">
                   <Heart aria-hidden="true" />
                   <span>{animeExtraInfo?.favoritesCount || "?"}</span>
                 </div>
               </div>
               <div className="rounded-sm flex space-y-2 flex-col items-center border py-2 px-4">
-                <h3 className="font-semibold text-lg leading-none text-secondary">Total Duration</h3>
+                <h3 className="font-semibold text-lg leading-none text-secondary">
+                  Total Duration
+                </h3>
                 <div className="flex items-center space-x-2">
                   <CalendarClock aria-hidden="true" />
-                  <span>{animeExtraInfo?.totalLength ? `${Math.abs(animeExtraInfo.totalLength)} min` : "?"}</span>
+                  <span>
+                    {animeExtraInfo?.totalLength
+                      ? `${Math.abs(animeExtraInfo.totalLength)} min`
+                      : "?"}
+                  </span>
                 </div>
               </div>
               <div className="rounded-sm flex space-y-2 flex-col items-center border py-2 px-4">
-                <h3 className="font-semibold text-lg leading-none text-secondary">18+</h3>
+                <h3 className="font-semibold text-lg leading-none text-secondary">
+                  18+
+                </h3>
                 <div className="flex items-center space-x-2">
                   <TriangleAlert aria-hidden="true" />
                   <span>{animeExtraInfo?.nsfw || redFlag ? "Yes" : "No"}</span>
@@ -396,41 +398,70 @@ export default function DetailedInfoCard({ params: { id } }) {
             </section>
             <section className="grid grid-cols-2 space-y-2 md:max-w-[85%]">
               <div className="flex flex-col sm:flex-row items-center gap-1 sm:gap-2">
-                <h3 className="font-semibold sm:text-lg text-secondary">Rating</h3>
-                <span className="text-sm">{animeInfo?.anime?.info?.stats?.rating}</span>
+                <h3 className="font-semibold sm:text-lg text-secondary">
+                  Rating
+                </h3>
+                <span className="text-sm">
+                  {animeInfo?.anime?.info?.stats?.rating}
+                </span>
               </div>
               <div className="flex flex-col sm:flex-row flex-wrap items-center gap-1 sm:gap-2">
-                <h3 className="font-semibold sm:text-lg text-secondary">Japanese</h3>
-                <span className="text-sm">{animeInfo?.anime?.moreInfo?.japanese}</span>
+                <h3 className="font-semibold sm:text-lg text-secondary">
+                  Japanese
+                </h3>
+                <span className="text-sm">
+                  {animeInfo?.anime?.moreInfo?.japanese}
+                </span>
               </div>
               <div className="flex flex-col sm:flex-row items-center gap-1 sm:gap-2">
-                <h3 className="font-semibold sm:text-lg text-secondary">Premiered</h3>
-                <span className="text-sm">{animeInfo?.anime?.moreInfo?.premiered}</span>
+                <h3 className="font-semibold sm:text-lg text-secondary">
+                  Premiered
+                </h3>
+                <span className="text-sm">
+                  {animeInfo?.anime?.moreInfo?.premiered}
+                </span>
               </div>
               <div className="flex flex-col sm:flex-row items-center gap-1 sm:gap-2">
-                <h3 className="font-semibold sm:text-lg text-secondary">Synonyms</h3>
-                <span className="text-sm">{animeInfo?.anime?.moreInfo?.synonyms}</span>
+                <h3 className="font-semibold sm:text-lg text-secondary">
+                  Synonyms
+                </h3>
+                <span className="text-sm">
+                  {animeInfo?.anime?.moreInfo?.synonyms}
+                </span>
               </div>
               <div className="flex flex-col sm:flex-row items-center gap-1 sm:gap-2">
-                <h3 className="font-semibold sm:text-lg text-secondary">Studios</h3>
-                <span className="text-sm">{animeInfo?.anime?.moreInfo?.studios}</span>
+                <h3 className="font-semibold sm:text-lg text-secondary">
+                  Studios
+                </h3>
+                <span className="text-sm">
+                  {animeInfo?.anime?.moreInfo?.studios}
+                </span>
               </div>
               <div className="flex flex-col sm:flex-row items-center gap-1 sm:gap-2">
-                <h3 className="font-semibold sm:text-lg text-secondary">Popularity Rank</h3>
-                <span className="text-sm">{animeExtraInfo?.popularityRank || "?"}</span>
+                <h3 className="font-semibold sm:text-lg text-secondary">
+                  Popularity Rank
+                </h3>
+                <span className="text-sm">
+                  {animeExtraInfo?.popularityRank || "?"}
+                </span>
               </div>
               <div className="flex flex-col sm:flex-row items-center gap-1 sm:gap-2">
-                <h3 className="font-semibold sm:text-lg text-secondary">Rating Rank</h3>
-                <span className="text-sm">{animeExtraInfo?.ratingRank || "?"}</span>
+                <h3 className="font-semibold sm:text-lg text-secondary">
+                  Rating Rank
+                </h3>
+                <span className="text-sm">
+                  {animeExtraInfo?.ratingRank || "?"}
+                </span>
               </div>
               <div className="flex flex-col flex-wrap sm:flex-row items-center gap-1 sm:gap-1">
-                <h3 className="font-semibold sm:text-lg text-secondary">Producers</h3>
+                <h3 className="font-semibold sm:text-lg text-secondary">
+                  Producers
+                </h3>
                 {animeInfo?.anime?.moreInfo?.producers?.map((p, i) => (
                   <Link
                     key={i}
                     href={`/search/${p}?type=producer`}
-                    aria-label={`Filter by producer: ${p}`}
-                  >
+                    aria-label={`Filter by producer: ${p}`}>
                     <span className="text-sm hover:text-primary leading-none">
                       {p +
                         (i === animeInfo?.anime?.moreInfo?.producers?.length - 1
@@ -457,8 +488,7 @@ export default function DetailedInfoCard({ params: { id } }) {
                   className={cn(
                     "text-secondary ml-2 font-bold text-sm sm:text-lg",
                     bakbak_one.className
-                  )}
-                >
+                  )}>
                   Promotional Videos
                 </h2>
                 <div className="md:max-w-[85%] ml-2 flex items-center gap-1 overflow-x-scroll no-scrollbar">
@@ -498,16 +528,14 @@ export default function DetailedInfoCard({ params: { id } }) {
                   className={cn(
                     "text-secondary ml-2 font-bold text-sm sm:text-lg",
                     bakbak_one.className
-                  )}
-                >
+                  )}>
                   Characters & Voice Actors
                 </h2>
                 <div className="w-full flex gap-x-2 items-center no-scrollbar overflow-x-scroll">
                   {animeInfo?.anime?.info?.charactersVoiceActors?.map((cva) => (
                     <div
                       key={cva.character.id}
-                      className="ml-2 bg-transparent flex items-center w-[200px] h-[150px] sm:w-[150px] sm:h-[120px]"
-                    >
+                      className="ml-2 bg-transparent flex items-center w-[200px] h-[150px] sm:w-[150px] sm:h-[120px]">
                       <div>
                         <div className="flex items-center">
                           <Avatar>
@@ -531,14 +559,12 @@ export default function DetailedInfoCard({ params: { id } }) {
                         </div>
                         <h3
                           className="text-xs font-semibold mb-1 truncate"
-                          title={cva.character.name}
-                        >
+                          title={cva.character.name}>
                           {cva.character.name}
                         </h3>
                         <p
                           className="text-[0.65rem] text-gray-200 truncate"
-                          title={`Voiced by: ${cva.voiceActor.name}`}
-                        >
+                          title={`Voiced by: ${cva.voiceActor.name}`}>
                           Voiced: {cva.voiceActor.name}
                         </p>
                       </div>
